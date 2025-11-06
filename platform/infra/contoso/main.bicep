@@ -6,6 +6,12 @@ param resourceIds resourceIdType
 
 var deployAppService = contosoToggles.?appService ?? false
 
+@description('Optional.  Deterministic token for resource names; auto-generated if not provided.')
+param resourceToken string = toLower(uniqueString(subscription().id, resourceGroup().name, location))
+
+@description('Optional.  Base name to seed resource names; defaults to a 12-char token.')
+param baseName string = substring(resourceToken, 0, 12)
+
 // Reference the platform team's published base AILZ infrastructure from ACR
 // This includes all template spec references for wrappers (published by CI/CD)
 // 
@@ -35,7 +41,7 @@ module serverfarm 'br/public:avm/res/web/serverfarm:0.5.0' = if (deployAppServic
   name: 'serverfarmDeployment'
   params: {
     // Required parameters
-    name: 'wsffcp001'
+    name: 'appsvc-${baseName}'
     // Non-required parameters
     reserved: true
     skuName: 'FC1'
@@ -52,7 +58,7 @@ module website 'br/public:avm/res/web/site:0.19.4' = if (deployAppService) {
   params: {
     // Required parameters
     kind: 'app'
-    name: 'wswaf001'
+    name: 'appsvc-site-${baseName}'
     serverFarmResourceId: serverfarm.outputs.resourceId
     // Non-required parameters
     basicPublishingCredentialsPolicies: [
