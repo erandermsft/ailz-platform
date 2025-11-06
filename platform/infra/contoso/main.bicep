@@ -61,7 +61,7 @@ module website 'br/public:avm/res/web/site:0.19.4' = if (deployAppService) {
   params: {
     // Required parameters
     kind: 'app'
-    name: 'appsvc-site-${baseName}'
+    name: baseName
     serverFarmResourceId: serverfarm.outputs.resourceId
     // Non-required parameters
     basicPublishingCredentialsPolicies: [
