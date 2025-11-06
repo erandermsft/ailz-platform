@@ -3,7 +3,7 @@ import { baseDeployToggles, contosoDeployTogglesType } from 'common/types.bicep'
 param deployToggles baseDeployToggles
 param contosoToggles contosoDeployTogglesType
 
-var deployAppService = contosoToggles.?appService
+var deployAppService = contosoToggles.?appService ?? false
 
 module inner '../ailz/main.bicep' = {
   params: {
