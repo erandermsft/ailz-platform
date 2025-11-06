@@ -15,7 +15,7 @@ permissions:
 env:
   BICEP_FILE_PATH: 'bicep/infra/contoso/main.bicep'
   ACR_NAME: ${{secrets.AZURE_CONTAINER_REGISTRY_NAME}} # Set this to your Azure Container Registry name
-  MODULE_NAME: 'modules/bicepcontoso/ailz'
+  MODULE_NAME: 'modules/bicep/contoso/ailz'
 
 jobs:
   publish:
