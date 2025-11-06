@@ -94,16 +94,17 @@ jobs:
             --display-name "AILZ Platform Base Infrastructure" \
             --description "Platform team's base AILZ infrastructure with template spec references (version ${{ steps.version.outputs.version }})"
 
-      - name: Publish base AILZ template spec (latest)
-        run: |
-          az ts create \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --name ts-ailz-platform-base \
-            --version latest \
-            --location ${{ env.AZURE_LOCATION }} \
-            --template-file bicep/deploy/main.json \
-            --display-name "AILZ Platform Base Infrastructure" \
-            --description "Platform team's base AILZ infrastructure with template spec references (latest)"
+    #   - name: Publish base AILZ template spec (latest)
+    #     run: |
+    #       az ts create \
+    #         --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+    #         --name ts-ailz-platform-base \
+    #         --version latest \
+    #         --location ${{ env.AZURE_LOCATION }} \
+    #         --template-file bicep/deploy/main.json \
+    #         --display-name "AILZ Platform Base Infrastructure" \
+    #         --description "Platform team's base AILZ infrastructure with template spec references (latest)"
+    #         --f
 
   publish-base-to-acr:
     name: Publish Base AILZ to ACR
