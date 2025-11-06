@@ -86,7 +86,7 @@ jobs:
       - name: Publish base AILZ template spec (versioned)
         run: |
           az ts create \
-            --resource-group ${{ env.AZURE_TS_RG }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --name ts-ailz-platform-base \
             --version ${{ steps.version.outputs.version }} \
             --location ${{ env.AZURE_LOCATION }} \
@@ -97,7 +97,7 @@ jobs:
       - name: Publish base AILZ template spec (latest)
         run: |
           az ts create \
-            --resource-group ${{ env.AZURE_TS_RG }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --name ts-ailz-platform-base \
             --version latest \
             --location ${{ env.AZURE_LOCATION }} \
