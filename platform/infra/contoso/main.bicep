@@ -23,7 +23,7 @@ param subnets baseExistingVNetSubnetsDefinitionType
 // IMPORTANT: Update bicepconfig.json with your actual ACR registry name
 // 
 // For local development: Comment this out and uncomment the local reference below
-module baseInfra 'br/ContosoACR:bicep/ailz/base:latest' = {
+module baseInfra 'br/ContosoACR:bicep/ailz/base:v20251106-cb61bb7' = {
   name: 'ailz-base-infrastructure'
   params: {
     deployToggles: deployToggles
@@ -85,7 +85,7 @@ module website 'br/public:avm/res/web/site:0.19.4' = if (deployAppService) {
       imagePullTraffic: true
     }
     publicNetworkAccess: 'Disabled'
-    scmSiteAlsoStopped: true
+    scmSiteAlsoStopped: true  
     siteConfig: {
       alwaysOn: false
       ftpsState: 'FtpsOnly'
