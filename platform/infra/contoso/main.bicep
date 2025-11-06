@@ -15,7 +15,7 @@ param resourceToken string = toLower(uniqueString(subscription().id, resourceGro
 param baseName string = substring(resourceToken, 0, 12)
 
 
-param subnets baseExistingVNetSubnetsDefinitionType 
+// param subnets baseExistingVNetSubnetsDefinitionType 
 
 // Reference the platform team's published base AILZ infrastructure from ACR
 // This includes all template spec references for wrappers (published by CI/CD)
