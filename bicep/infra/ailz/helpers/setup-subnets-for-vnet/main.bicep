@@ -15,13 +15,13 @@ var defaultExistingVnetSubnets = [
     name: 'agent-subnet'
     addressPrefix: '192.168.0.0/25'
     delegation: 'Microsoft.App/environments'
-    serviceEndpoints: ['Microsoft.CognitiveServices']
+    // serviceEndpoints: ['Microsoft.CognitiveServices']
     networkSecurityGroupResourceId: !empty(nsgResourceIds.agentNsgResourceId) ? nsgResourceIds.agentNsgResourceId : null
   }
   {
     name: 'pe-subnet'
     addressPrefix: '192.168.1.64/27'
-    serviceEndpoints: ['Microsoft.AzureCosmosDB']
+    // serviceEndpoints: ['Microsoft.AzureCosmosDB']
     privateEndpointNetworkPolicies: 'Disabled'
     networkSecurityGroupResourceId: !empty(nsgResourceIds.peNsgResourceId) ? nsgResourceIds.peNsgResourceId : null
   }
@@ -52,7 +52,7 @@ var defaultExistingVnetSubnets = [
     name: 'aca-env-subnet'
     addressPrefix: '192.168.1.112/28'
     delegation: 'Microsoft.App/environments'
-    serviceEndpoints: ['Microsoft.AzureCosmosDB']
+    // serviceEndpoints: ['Microsoft.AzureCosmosDB']
     networkSecurityGroupResourceId: !empty(nsgResourceIds.acaEnvironmentNsgResourceId) ? nsgResourceIds.acaEnvironmentNsgResourceId : null
   }
   {
