@@ -1,0 +1,143 @@
+name: Publish Base AILZ Module
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'bicep/**'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR_NAME: ${{ secrets.AZURE_CONTAINER_REGISTRY_NAME }}
+  BASE_MODULE_NAME: 'bicep/ailz/base'
+  AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+  AZURE_TS_RG: ${{ secrets.AZURE_TS_RG }} # Central Template Spec resource group
+
+jobs:
+  publish-wrapper-template-specs:
+    name: Publish Wrapper Template Specs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run preprovision script
+        run: |
+          chmod +x ./bicep/scripts/preprovision.sh
+          ./bicep/scripts/preprovision.sh
+        env:
+          AZURE_LOCATION: ${{ env.AZURE_LOCATION }}
+          AZURE_SUBSCRIPTION_ID: ${{ env.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP: ${{ env.AZURE_RESOURCE_GROUP }}
+          AZURE_TS_RG: ${{ env.AZURE_TS_RG }}
+
+      - name: Upload deploy artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bicep-deploy
+          path: bicep/deploy/
+          retention-days: 5
+
+  publish-base-template-spec:
+    name: Publish Base AILZ Template Spec
+    needs: publish-wrapper-template-specs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download deploy artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: bicep-deploy
+          path: bicep/deploy/
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get version tag
+        id: version
+        run: |
+          VERSION="v$(date +'%Y%m%d')-${GITHUB_SHA::7}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Publishing version: $VERSION"
+
+      - name: Build main.bicep to JSON
+        run: |
+          az bicep build \
+            --file bicep/deploy/main.bicep \
+            --outfile bicep/deploy/main.json
+
+      - name: Publish base AILZ template spec (versioned)
+        run: |
+          az ts create \
+            --resource-group ${{ env.AZURE_TS_RG }} \
+            --name ts-ailz-platform-base \
+            --version ${{ steps.version.outputs.version }} \
+            --location ${{ env.AZURE_LOCATION }} \
+            --template-file bicep/deploy/main.json \
+            --display-name "AILZ Platform Base Infrastructure" \
+            --description "Platform team's base AILZ infrastructure with template spec references (version ${{ steps.version.outputs.version }})"
+
+      - name: Publish base AILZ template spec (latest)
+        run: |
+          az ts create \
+            --resource-group ${{ env.AZURE_TS_RG }} \
+            --name ts-ailz-platform-base \
+            --version latest \
+            --location ${{ env.AZURE_LOCATION }} \
+            --template-file bicep/deploy/main.json \
+            --display-name "AILZ Platform Base Infrastructure" \
+            --description "Platform team's base AILZ infrastructure with template spec references (latest)"
+
+  publish-base-to-acr:
+    name: Publish Base AILZ to ACR
+    needs: publish-wrapper-template-specs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download deploy artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: bicep-deploy
+          path: bicep/deploy/
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get version tag
+        id: version
+        run: |
+          VERSION="v$(date +'%Y%m%d')-${GITHUB_SHA::7}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Publishing base AILZ version: $VERSION"
+
+      - name: Publish base AILZ module to ACR (versioned)
+        run: |
+          az bicep publish \
+            --file bicep/deploy/main.bicep \
+            --target "br:${{ env.ACR_NAME }}.azurecr.io/${{ env.BASE_MODULE_NAME }}:${{ steps.version.outputs.version }}"
+
+      - name: Publish base AILZ module to ACR (latest)
+        run: |
+          az bicep publish \
+            --file bicep/deploy/main.bicep \
+            --target "br:${{ env.ACR_NAME }}.azurecr.io/${{ env.BASE_MODULE_NAME }}:latest"

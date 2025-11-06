@@ -1,0 +1,65 @@
+name: Publish Contoso Platform Module
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'platform/**'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR_NAME: ${{ secrets.AZURE_CONTAINER_REGISTRY_NAME }}
+  PLATFORM_MODULE_NAME: 'bicep/platform/contoso'
+
+jobs:
+  publish-platform-module:
+    name: Publish Contoso Platform Module
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get version tag
+        id: version
+        run: |
+          VERSION="v$(date +'%Y%m%d')-${GITHUB_SHA::7}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Publishing Contoso platform version: $VERSION"
+
+      - name: Publish Contoso platform module to ACR (versioned)
+        run: |
+          az bicep publish \
+            --file platform/infra/contoso/main.bicep \
+            --target "br:${{ env.ACR_NAME }}.azurecr.io/${{ env.PLATFORM_MODULE_NAME }}:${{ steps.version.outputs.version }}"
+
+      - name: Publish Contoso platform module to ACR (latest)
+        run: |
+          az bicep publish \
+            --file platform/infra/contoso/main.bicep \
+            --target "br:${{ env.ACR_NAME }}.azurecr.io/${{ env.PLATFORM_MODULE_NAME }}:latest"
+
+      - name: Summary
+        run: |
+          echo "### Published Contoso Platform Module 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version**: \`${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Module Path**:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bicep" >> $GITHUB_STEP_SUMMARY
+          echo "module infra 'br:${{ env.ACR_NAME }}.azurecr.io/${{ env.PLATFORM_MODULE_NAME }}:${{ steps.version.outputs.version }}' = {" >> $GITHUB_STEP_SUMMARY
+          echo "  name: 'contoso-platform'" >> $GITHUB_STEP_SUMMARY
+          echo "  params: { ... }" >> $GITHUB_STEP_SUMMARY
+          echo "}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

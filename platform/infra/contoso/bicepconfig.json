@@ -1,0 +1,16 @@
+{
+  "cloud": {
+    "currentProfile": "AzureCloud"
+  },
+  "moduleAliases": {
+    "br": {
+      "ContosoACR": {
+        "registry": "envacrtkkzfewrtdpby.azurecr.io"
+      },
+      "public": {
+        "registry": "mcr.microsoft.com",
+        "modulePath": "bicep"
+      }
+    }
+  }
+}
