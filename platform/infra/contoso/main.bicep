@@ -1,4 +1,4 @@
-import { baseDeployToggles, contosoDeployTogglesType,resourceIdType } from 'common/types.bicep'
+import { baseDeployToggles, contosoDeployTogglesType,resourceIdType,baseExistingVNetSubnetsDefinitionType } from 'common/types.bicep'
 
 param deployToggles baseDeployToggles
 param contosoToggles contosoDeployTogglesType
@@ -14,6 +14,9 @@ param resourceToken string = toLower(uniqueString(subscription().id, resourceGro
 @description('Optional.  Base name to seed resource names; defaults to a 12-char token.')
 param baseName string = substring(resourceToken, 0, 12)
 
+
+param subnets baseExistingVNetSubnetsDefinitionType 
+
 // Reference the platform team's published base AILZ infrastructure from ACR
 // This includes all template spec references for wrappers (published by CI/CD)
 // 
@@ -25,6 +28,7 @@ module baseInfra 'br/ContosoACR:bicep/ailz/base:latest' = {
   params: {
     deployToggles: deployToggles
      resourceIds: resourceIds
+     existingVNetSubnetsDefinition: subnets
      location: location
   }
 

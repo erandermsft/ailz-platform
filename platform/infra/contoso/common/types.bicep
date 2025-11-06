@@ -1,10 +1,14 @@
-import {deployTogglesType, resourceIdsType} from '../../../../bicep/infra/common/types.bicep'
+import {deployTogglesType, resourceIdsType,existingVNetSubnetsDefinitionType} from '../../../../bicep/infra/common/types.bicep'
 
 // Re-export the base type so consumers can use it
 @export()
 type baseDeployToggles = deployTogglesType
 @export()
 type resourceIdType = resourceIdsType
+
+
+@export()
+type baseExistingVNetSubnetsDefinitionType = existingVNetSubnetsDefinitionType
 
 // Define only Contoso-specific extensions
 @export()
