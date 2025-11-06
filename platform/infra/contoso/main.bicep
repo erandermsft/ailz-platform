@@ -5,6 +5,8 @@ param contosoToggles contosoDeployTogglesType
 param resourceIds resourceIdType
 
 var deployAppService = contosoToggles.?appService ?? false
+@description('Optional. Location')
+param location string = 'swedencentral'
 
 @description('Optional.  Deterministic token for resource names; auto-generated if not provided.')
 param resourceToken string = toLower(uniqueString(subscription().id, resourceGroup().name, location))
@@ -23,6 +25,7 @@ module baseInfra 'br/ContosoACR:bicep/ailz/base:latest' = {
   params: {
     deployToggles: deployToggles
      resourceIds: resourceIds
+     location: location
   }
 
   
