@@ -1,0 +1,52 @@
+name: Publish Bicep to ACR
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'bicep/infra/contoso/**'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  BICEP_FILE_PATH: 'bicep/infra/contoso/main.bicep'
+  ACR_NAME: ${{secrets.AZURE_CONTAINER_REGISTRY_NAME}} # Set this to your Azure Container Registry name
+  MODULE_NAME: 'modules/bicepcontoso/ailz'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get version tag
+        id: version
+        run: |
+          # Use commit SHA as version tag, or customize as needed
+          VERSION="v$(date +'%Y%m%d')-${GITHUB_SHA::7}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Publishing version: $VERSION"
+
+      - name: Publish Bicep module to ACR
+        run: |
+          az bicep publish \
+            --file ${{ env.BICEP_FILE_PATH }} \
+            --target "br:${{ env.ACR_NAME }}.azurecr.io/${{ env.MODULE_NAME }}:${{ steps.version.outputs.version }}"
+
+      - name: Publish latest tag
+        run: |
+          az bicep publish \
+            --file ${{ env.BICEP_FILE_PATH }} \
+            --target "br:${{ env.ACR_NAME }}.azurecr.io/${{ env.MODULE_NAME }}:latest"
