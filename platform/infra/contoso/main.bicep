@@ -28,7 +28,7 @@ module baseInfra 'br/ContosoACR:bicep/ailz/base:v20251106-cb61bb7' = {
   params: {
     deployToggles: deployToggles
      resourceIds: resourceIds
-     existingVNetSubnetsDefinition: subnets
+    //  existingVNetSubnetsDefinition: subnets
      location: location
   }
 
