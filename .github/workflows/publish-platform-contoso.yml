@@ -49,6 +49,7 @@ jobs:
           az bicep publish \
             --file platform/infra/contoso/main.bicep \
             --target "br:${{ env.ACR_NAME }}.azurecr.io/${{ env.PLATFORM_MODULE_NAME }}:latest"
+            --force 
 
       - name: Summary
         run: |

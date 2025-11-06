@@ -141,3 +141,4 @@ jobs:
           az bicep publish \
             --file bicep/deploy/main.bicep \
             --target "br:${{ env.ACR_NAME }}.azurecr.io/${{ env.BASE_MODULE_NAME }}:latest"
+            --force

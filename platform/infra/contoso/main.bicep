@@ -1,7 +1,8 @@
-import { baseDeployToggles, contosoDeployTogglesType } from 'common/types.bicep'
+import { baseDeployToggles, contosoDeployTogglesType,resourceIdType } from 'common/types.bicep'
 
 param deployToggles baseDeployToggles
 param contosoToggles contosoDeployTogglesType
+param resourceIds resourceIdType
 
 var deployAppService = contosoToggles.?appService ?? false
 
@@ -15,7 +16,10 @@ module baseInfra 'br/ContosoACR:bicep/ailz/base:latest' = {
   name: 'ailz-base-infrastructure'
   params: {
     deployToggles: deployToggles
+     resourceIds: resourceIds
   }
+
+  
 }
 
 // For local development: Uncomment this and comment out the ACR reference above
@@ -26,7 +30,7 @@ module baseInfra 'br/ContosoACR:bicep/ailz/base:latest' = {
 //   }
 // }
 
-// Contoso-specific resources below
+// Contoso-specific resources below. Re-use Wrapper pattern?
 module serverfarm 'br/public:avm/res/web/serverfarm:0.5.0' = if (deployAppService) {
   name: 'serverfarmDeployment'
   params: {
