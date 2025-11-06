@@ -87,7 +87,7 @@ module website 'br/public:avm/res/web/site:0.19.4' = if (deployAppService) {
     publicNetworkAccess: 'Disabled'
     scmSiteAlsoStopped: true
     siteConfig: {
-      alwaysOn: true
+      alwaysOn: false
       ftpsState: 'FtpsOnly'
       healthCheckPath: '/healthz'
       metadata: [
