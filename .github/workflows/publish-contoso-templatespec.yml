@@ -36,7 +36,8 @@ jobs:
           AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
           AZURE_TS_RG: ${{ secrets.AZURE_TS_RG }}
-
+          AZURE_SUBSCRIPTION_ID: ${{ env.AZURE_SUBSCRIPTION_ID }}
+          
       - name: Verify deploy folder created
         run: |
           if [ ! -f "bicep/deploy/main.bicep" ]; then
@@ -53,7 +54,7 @@ jobs:
           az ts create \
             --name ts-contoso-ailz \
             --version "$VERSION" \
-            --resource-group ${{ secrets.AZURE_TS_RG }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --location ${{ secrets.AZURE_LOCATION }} \
             --template-file platform/infra/contoso/main.bicep \
             --yes
@@ -64,7 +65,7 @@ jobs:
           az ts create \
             --name ts-contoso-ailz \
             --version "latest" \
-            --resource-group ${{ secrets.AZURE_TS_RG }} \
+             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --location ${{ secrets.AZURE_LOCATION }} \
             --template-file platform/infra/contoso/main.bicep \
             --yes
