@@ -233,6 +233,26 @@ fi
 cp -r "$infra_dir" "$deploy_dir"
 print_success "Copied infra → deploy"
 
+# Overlay custom wrappers from platform team (if any exist)
+platform_wrappers_dir="$BICEP_ROOT/../platform/infra/contoso/wrappers"
+if [ -d "$platform_wrappers_dir" ]; then
+    print_substep "Applying custom wrappers from platform team..."
+    custom_wrapper_count=0
+    for custom_wrapper in "$platform_wrappers_dir"/*.bicep; do
+        if [ -f "$custom_wrapper" ]; then
+            cp "$custom_wrapper" "$deploy_wrappers_dir/"
+            wrapper_name=$(basename "$custom_wrapper")
+            print_gray "    Overlayed: $wrapper_name"
+            custom_wrapper_count=$((custom_wrapper_count + 1))
+        fi
+    done
+    if [ $custom_wrapper_count -gt 0 ]; then
+        print_success "Applied $custom_wrapper_count custom wrapper(s)"
+    fi
+else
+    print_gray "No custom wrappers found (platform/infra/contoso/wrappers/)"
+fi
+
 #===============================================================================
 # STEP 2: AZURE AUTHENTICATION & RESOURCE GROUP SETUP
 #===============================================================================

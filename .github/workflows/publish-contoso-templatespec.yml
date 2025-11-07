@@ -1,0 +1,72 @@
+name: Publish Contoso AILZ Template Spec
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'platform/**'
+      - 'bicep/**'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  prepare-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run preprovision script
+        run: |
+          cd bicep
+          chmod +x scripts/preprovision.sh
+          ./scripts/preprovision.sh
+        env:
+          AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
+          AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          AZURE_TS_RG: ${{ secrets.AZURE_TS_RG }}
+
+      - name: Verify deploy folder created
+        run: |
+          if [ ! -f "bicep/deploy/main.bicep" ]; then
+            echo "Error: bicep/deploy/main.bicep not found after preprovision"
+            exit 1
+          fi
+          echo "Deploy folder structure:"
+          ls -la bicep/deploy/
+
+      - name: Publish Contoso AILZ Template Spec
+        run: |
+          VERSION="v$(date +%Y%m%d)-${{ github.sha }}"
+          
+          az ts create \
+            --name ts-contoso-ailz \
+            --version "$VERSION" \
+            --resource-group ${{ secrets.AZURE_TS_RG }} \
+            --location ${{ secrets.AZURE_LOCATION }} \
+            --template-file platform/infra/contoso/main.bicep \
+            --yes
+          
+          echo "Published Template Spec: ts-contoso-ailz version $VERSION"
+          
+          # Also create/update 'latest' version
+          az ts create \
+            --name ts-contoso-ailz \
+            --version "latest" \
+            --resource-group ${{ secrets.AZURE_TS_RG }} \
+            --location ${{ secrets.AZURE_LOCATION }} \
+            --template-file platform/infra/contoso/main.bicep \
+            --yes
+          
+          echo "Updated Template Spec: ts-contoso-ailz version latest"
