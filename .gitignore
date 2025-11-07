@@ -1,0 +1,23 @@
+# Generated files from preprovision script
+bicep/deploy/
+
+# Bicep build outputs
+*.json
+!bicepconfig.json
+!*.bicepparam.json
+
+# Azure/VS Code
+.azure/
+.vscode/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.local
