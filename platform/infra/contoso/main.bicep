@@ -155,7 +155,7 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
 module customSubnets '../../../bicep/infra/helpers/deploy-subnets-to-vnet/main.bicep' = if (deploySql || deployAppService) {
   name: 'custom-subnets-${baseName}'
   params: {
-    virtualNetworkName: baseInfra.outputs.virtualNetworkName
+    virtualNetworkName: last(split(baseInfra.outputs.virtualNetworkResourceId, '/'))
     subnets: contosoSubnets
   }
   dependsOn: [
