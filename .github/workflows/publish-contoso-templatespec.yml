@@ -27,47 +27,53 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Run preprovision script
+      - name: Run platform preprovision script
         run: |
-          cd bicep
-          chmod +x scripts/preprovision.sh
-          ./scripts/preprovision.sh
+          chmod +x platform/scripts/preprovision-platform.sh
+          ./platform/scripts/preprovision-platform.sh
         env:
           AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
           AZURE_TS_RG: ${{ secrets.AZURE_TS_RG }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           
-      - name: Verify deploy folder created
+      - name: Verify platform deploy folder created
         run: |
-          if [ ! -f "bicep/deploy/main.bicep" ]; then
-            echo "Error: bicep/deploy/main.bicep not found after preprovision"
+          if [ ! -f "platform/deploy/main.bicep" ] || [ ! -f "platform/deploy/main-byo-vnet.bicep" ]; then
+            echo "Error: Platform deploy files not found after preprovision"
             exit 1
           fi
-          echo "Deploy folder structure:"
-          ls -la bicep/deploy/
+          echo "Platform deploy folder structure:"
+          ls -la platform/deploy/
 
-      - name: Publish Contoso AILZ Template Spec
+      - name: Publish Contoso AILZ Template Specs
         run: |
-          VERSION="v$(date +%Y%m%d)-${{ github.sha }}"
+          VERSION="${GITHUB_SHA::7}"
           
+          # Publish New VNet Template Spec
+          echo "Publishing ts-contoso-ailz (new VNet version)..."
           az ts create \
             --name ts-contoso-ailz \
             --version "$VERSION" \
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
             --location ${{ secrets.AZURE_LOCATION }} \
-            --template-file platform/infra/contoso/main.bicep \
+            --template-file platform/deploy/main.bicep \
             --yes
           
-          echo "Published Template Spec: ts-contoso-ailz version $VERSION"
+          echo "✓ Published Template Spec: ts-contoso-ailz version $VERSION"
           
-          # Also create/update 'latest' version
+          # Publish BYO VNet Template Spec
+          echo "Publishing ts-contoso-ailz-byo-vnet (bring your own VNet version)..."
           az ts create \
-            --name ts-contoso-ailz \
-            --version "latest" \
-             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --name ts-contoso-ailz-byo-vnet \
+            --version "$VERSION" \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
             --location ${{ secrets.AZURE_LOCATION }} \
-            --template-file platform/infra/contoso/main.bicep \
+            --template-file platform/deploy/main-byo-vnet.bicep \
             --yes
           
-          echo "Updated Template Spec: ts-contoso-ailz version latest"
+          echo "✓ Published Template Spec: ts-contoso-ailz-byo-vnet version $VERSION"
+          echo ""
+          echo "Summary: Both Template Specs published successfully"
+          echo "  - ts-contoso-ailz: New VNet deployment (version $VERSION)"
+          echo "  - ts-contoso-ailz-byo-vnet: Bring Your Own VNet deployment (version $VERSION)"
