@@ -130,15 +130,9 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
   params: {
     deployToggles: deployToggles
     resourceIds: resourceIds
-    // existingVNetSubnetsDefinition: subnets
     location: location
-    
-    // Extend VNet with Contoso custom subnets
-    vNetDefinition: {
-      name: 'vnet-ailz-${baseName}'
-      addressPrefixes: ['192.168.0.0/22']  // Matches upstream AILZ default (1024 IPs)
-      subnets: contosoSubnets  // Custom subnets get merged with upstream defaults
-    }
+    // Don't pass vNetDefinition - let upstream create default VNet with all default subnets
+    // We'll add custom subnets in a separate module after VNet is created
   }
 }
 
@@ -152,6 +146,22 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
 //     location: location
 //   }
 // }
+
+// ===================================
+// ADD CUSTOM SUBNETS TO AILZ VNET
+// ===================================
+
+// Add custom subnets to the VNet created by AILZ
+module customSubnets '../../../bicep/infra/helpers/deploy-subnets-to-vnet/main.bicep' = if (deploySql || deployAppService) {
+  name: 'custom-subnets-${baseName}'
+  params: {
+    virtualNetworkName: baseInfra.outputs.virtualNetworkName
+    subnets: contosoSubnets
+  }
+  dependsOn: [
+    baseInfra
+  ]
+}
 
 // ===================================
 // CONTOSO RESOURCES - AZURE SQL
@@ -230,7 +240,7 @@ module serverfarm 'br/public:avm/res/web/serverfarm:0.5.0' = if (deployAppServic
     // Non-required parameters
     reserved: false  // Windows
     skuName: 'P1v3'  // Premium V3 required for VNet integration
-    skuCapacity: 1
+    skuCapacity: 2  // Minimum 2 workers required for zone redundancy
     tags: {
       Environment: 'Non-Prod'
       'hidden-title': 'Contoso App Service Plan'
@@ -262,7 +272,7 @@ module website 'br/public:avm/res/web/site:0.19.4' = if (deployAppService) {
     httpsOnly: true
     
     // VNet Integration for outbound traffic
-    virtualNetworkSubnetResourceId: '${baseInfra.outputs.virtualNetworkResourceId}/subnets/snet-appservice'
+    virtualNetworkSubnetResourceId: deployAppService ? '${baseInfra.outputs.virtualNetworkResourceId}/subnets/snet-appservice' : ''
     
     publicNetworkAccess: 'Disabled'
     scmSiteAlsoStopped: true  
