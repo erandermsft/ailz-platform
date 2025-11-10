@@ -258,7 +258,7 @@ module website 'br/public:avm/res/web/site:0.19.4' = if (deployAppService) {
     httpsOnly: true
     
     // VNet Integration for outbound traffic
-    virtualNetworkSubnetId: '${baseInfra.outputs.virtualNetworkResourceId}/subnets/snet-appservice'
+    virtualNetworkSubnetResourceId: '${baseInfra.outputs.virtualNetworkResourceId}/subnets/snet-appservice'
     
     publicNetworkAccess: 'Disabled'
     scmSiteAlsoStopped: true  
@@ -275,20 +275,19 @@ module website 'br/public:avm/res/web/site:0.19.4' = if (deployAppService) {
       minTlsVersion: '1.2'
       vnetRouteAllEnabled: true  // Force all traffic through VNet
       http20Enabled: true
+      // SQL Connection String (using managed identity)
+      connectionStrings: deploySql ? [
+        {
+          name: 'DefaultConnection'
+          connectionString: 'Server=tcp:sql-${baseName}.database.windows.net,1433;Database=db-contoso;Authentication=Active Directory Managed Identity;'
+          type: 'SQLAzure'
+        }
+      ] : []
     }
     
     managedIdentities: {
       systemAssigned: true
     }
-    
-    // SQL Connection String (using managed identity)
-    connectionStrings: deploySql ? [
-      {
-        name: 'DefaultConnection'
-        connectionString: 'Server=tcp:sql-${baseName}.database.windows.net,1433;Database=db-contoso;Authentication=Active Directory Managed Identity;'
-        type: 'SQLAzure'
-      }
-    ] : []
   }
   dependsOn: [
     baseInfra
