@@ -28,12 +28,14 @@ For complete details, see the [upstream documentation](https://github.com/Azure/
 
 ## About This Repository
 
-This is a **platform customization layer** showing how enterprise platform teams can:
+This repository provides **example implementations** showing how platform teams can customize the Azure AI Landing Zone. It demonstrates:
 
-1. **Reference upstream AILZ** as a baseline
-2. **Add corporate standards** (naming, tagging, policies, resources)
-3. **Customize wrappers** for specific organizational requirements
-4. **Publish versioned modules** for workload teams to consume
+1. **Referencing upstream AILZ** as a baseline
+2. **Adding corporate standards** (naming, tagging, policies, resources)
+3. **Customizing wrappers** for specific requirements
+4. **Publishing versioned modules** for workload teams
+
+These are reference implementations - adapt the patterns to fit your organization's needs.
 
 ### Repository Structure
 
@@ -50,48 +52,34 @@ This is a **platform customization layer** showing how enterprise platform teams
 
 ## Deployment Approaches
 
-This repository demonstrates **two publishing strategies**. Choose based on your needs:
+Two example approaches for publishing your customizations:
 
-### ⭐ Template Spec Approach (Recommended - Start Here)
+### Template Spec Approach
 
-**Best for most organizations** - simpler operations, easier to maintain
+Publishes a single Template Spec that workload teams consume.
 
-✅ **Pros:**
-- Single Template Spec for workload teams to consume
-- No Azure Container Registry required
+**Features:**
+- Single Template Spec artifact
+- No Azure Container Registry needed
 - One GitHub Actions workflow
 - Simpler access control (Template Spec RG only)
 - Custom wrappers automatically overlayed during build
-
-❌ **Cons:**
-- Less flexible for multi-team scenarios
-- Single bundle (not as composable)
 
 📖 **Full Guide**: [DEPLOYMENT-FLOW-TEMPLATESPEC.md](DEPLOYMENT-FLOW-TEMPLATESPEC.md)
 
 ---
 
-### 🏢 ACR Module Approach (Alternative - For Enterprise Scale)
+### ACR Module Approach
 
-**Best for large enterprises** with multiple platform teams or complex governance
+Publishes layered modules to Azure Container Registry.
 
-✅ **Pros:**
-- Layered modules (base AILZ + platform layer)
-- More composable and flexible
-- Better for multiple platform teams
-- Workload teams can mix base + platform modules
-
-❌ **Cons:**
-- Requires Azure Container Registry
-- Two GitHub Actions workflows to maintain
-- More complex access control (ACR + Template Spec RG)
-- Higher operational overhead
+**Features:**
+- Separate base AILZ and platform layer modules
+- More composable architecture
+- Multiple platform teams can publish independently
+- Workload teams can mix and match modules
 
 📖 **Full Guide**: [DEPLOYMENT-FLOW.md](DEPLOYMENT-FLOW.md)
-
----
-
-**💡 Recommendation**: Start with the **Template Spec approach** unless you have specific enterprise requirements that demand the ACR layering model.
 
 ---
 
@@ -205,7 +193,7 @@ This implementation follows:
 
 ## Contributing
 
-This is a **reference implementation** showing one way to customize AILZ. Feel free to:
+These are **reference implementations** showing example patterns for customizing AILZ. Feel free to:
 
 - Fork and adapt for your organization
 - Share improvements via pull requests
