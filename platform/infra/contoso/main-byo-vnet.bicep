@@ -16,167 +16,20 @@ param resourceToken string = toLower(uniqueString(subscription().id, resourceGro
 @description('Optional. Base name to seed resource names; defaults to a 12-char token.')
 param baseName string = substring(resourceToken, 0, 12)
 
-@description('Required. Name or Resource ID of existing VNet')
+@description('Required. Name or Resource ID of existing VNet (with subnets already created)')
 param existingVNetName string
-
-// ===================================
-// CONTOSO CUSTOM NSGS
-// ===================================
-
-// SQL Subnet NSG
-module sqlNsg 'br/public:avm/res/network/network-security-group:0.5.0' = if (deploySql) {
-  name: 'nsg-sql-${baseName}'
-  params: {
-    name: 'nsg-sql-${baseName}'
-    location: location
-    securityRules: [
-      {
-        name: 'AllowVnetInbound'
-        properties: {
-          protocol: '*'
-          sourcePortRange: '*'
-          destinationPortRange: '*'
-          sourceAddressPrefix: 'VirtualNetwork'
-          destinationAddressPrefix: '*'
-          access: 'Allow'
-          priority: 100
-          direction: 'Inbound'
-        }
-      }
-      {
-        name: 'DenyAllInbound'
-        properties: {
-          protocol: '*'
-          sourcePortRange: '*'
-          destinationPortRange: '*'
-          sourceAddressPrefix: '*'
-          destinationAddressPrefix: '*'
-          access: 'Deny'
-          priority: 4096
-          direction: 'Inbound'
-        }
-      }
-    ]
-  }
-}
-
-// App Service Subnet NSG
-module appServiceNsg 'br/public:avm/res/network/network-security-group:0.5.0' = if (deployAppService) {
-  name: 'nsg-appservice-${baseName}'
-  params: {
-    name: 'nsg-appservice-${baseName}'
-    location: location
-    securityRules: [
-      {
-        name: 'AllowAppServiceManagement'
-        properties: {
-          protocol: 'Tcp'
-          sourcePortRange: '*'
-          destinationPortRanges: ['454', '455']
-          sourceAddressPrefix: 'AppServiceManagement'
-          destinationAddressPrefix: '*'
-          access: 'Allow'
-          priority: 100
-          direction: 'Inbound'
-        }
-      }
-      {
-        name: 'AllowVnetInbound'
-        properties: {
-          protocol: '*'
-          sourcePortRange: '*'
-          destinationPortRange: '*'
-          sourceAddressPrefix: 'VirtualNetwork'
-          destinationAddressPrefix: '*'
-          access: 'Allow'
-          priority: 200
-          direction: 'Inbound'
-        }
-      }
-    ]
-  }
-}
-
-// ===================================
-// CONTOSO CUSTOM SUBNETS
-// ===================================
-
-// All subnets for BYO VNet scenario (AILZ defaults + Contoso custom)
-// Must provide ALL subnets upfront when useDefaultSubnets=false
-var allSubnets = concat(
-  [
-    // AILZ Default Subnets (required for platform functionality)
-    {
-      name: 'agent-subnet'
-      addressPrefix: '192.168.0.0/25'  // 128 IPs (192.168.0.0-127)
-      delegation: 'Microsoft.App/environments'
-      serviceEndpoints: ['Microsoft.CognitiveServices']
-    }
-    {
-      name: 'pe-subnet'
-      addressPrefix: '192.168.0.128/26'  // 64 IPs (192.168.0.128-191) - MOVED to avoid conflict
-      serviceEndpoints: ['Microsoft.AzureCosmosDB']
-      privateEndpointNetworkPolicies: 'Disabled'
-    }
-    {
-      name: 'appgw-subnet'
-      addressPrefix: '192.168.0.192/26'  // 64 IPs (192.168.0.192-255)
-    }
-    {
-      name: 'AzureBastionSubnet'
-      addressPrefix: '192.168.1.0/26'  // 64 IPs (192.168.1.0-63)
-    }
-    {
-      name: 'AzureFirewallSubnet'
-      addressPrefix: '192.168.1.192/26'  // 64 IPs (192.168.1.192-255) - MOVED
-    }
-    {
-      name: 'apim-subnet'
-      addressPrefix: '192.168.1.128/27'  // 32 IPs (192.168.1.128-159)
-    }
-    {
-      name: 'jumpbox-subnet'
-      addressPrefix: '192.168.1.160/28'  // 16 IPs (192.168.1.160-175)
-    }
-    {
-      name: 'aca-env-subnet'
-      addressPrefix: '192.168.1.176/28'  // 16 IPs (192.168.1.176-191)
-      delegation: 'Microsoft.App/environments'
-      serviceEndpoints: ['Microsoft.AzureCosmosDB']
-    }
-    {
-      name: 'devops-agents-subnet'
-      addressPrefix: '192.168.1.144/28'  // 16 IPs (192.168.1.144-159) - MOVED
-    }
-  ],
-  // Contoso Custom Subnets (conditional based on toggles)
-  deploySql ? [{
-    name: 'sql-subnet'
-    addressPrefix: '192.168.1.64/27'  // 32 IPs (192.168.1.64-95)
-    networkSecurityGroupResourceId: sqlNsg!.outputs.resourceId
-    privateEndpointNetworkPolicies: 'Disabled'
-    privateLinkServiceNetworkPolicies: 'Enabled'
-  }] : [],
-  deployAppService ? [{
-    name: 'appservice-subnet'
-    addressPrefix: '192.168.1.96/27'  // 32 IPs (192.168.1.96-127)
-    networkSecurityGroupResourceId: appServiceNsg!.outputs.resourceId
-    delegation: 'Microsoft.Web/serverFarms'
-    privateEndpointNetworkPolicies: 'Disabled'
-    privateLinkServiceNetworkPolicies: 'Enabled'
-  }] : []
-)
 
 // ===================================
 // BYO VNET CONFIGURATION
 // ===================================
 
 // Reference the base AILZ infrastructure with existing VNet
+// IMPORTANT: VNet and all subnets must already exist (deploy vnet-prerequisites.bicep first)
 module baseInfra '../../../bicep/deploy/main.bicep' = {
   name: 'ailz-base-infrastructure'
   params: {
     deployToggles: union(deployToggles, {
-      virtualNetwork: false  // Don't create new VNet
+      virtualNetwork: false  // Don't create new VNet - use existing
     })
     resourceIds: union(resourceIds, {
       virtualNetworkResourceId: contains(existingVNetName, '/') 
@@ -185,13 +38,11 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
     })
     location: location
     
-    // Configure subnets for existing VNet
-    // Use complete subnet list (AILZ defaults + Contoso custom) deployed upfront
-    existingVNetSubnetsDefinition: {
-      existingVNetName: existingVNetName
-      useDefaultSubnets: false  // false = provide complete subnet list
-      subnets: allSubnets  // All subnets (AILZ + Contoso) deployed together
-    }
+    // AILZ will use existing subnets (no subnet creation)
+    // Subnets must already exist in the VNet:
+    // - agent-subnet, pe-subnet, appgw-subnet, AzureBastionSubnet, AzureFirewallSubnet
+    // - apim-subnet, jumpbox-subnet, aca-env-subnet, devops-agents-subnet
+    // - sql-subnet (if deploySql=true), appservice-subnet (if deployAppService=true)
   }
 }
 
