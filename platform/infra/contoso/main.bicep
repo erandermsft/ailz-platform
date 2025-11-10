@@ -162,10 +162,14 @@ module sqlServer 'br/public:avm/res/sql/server:0.9.0' = if (deploySql) {
   params: {
     name: 'sql-${baseName}'
     location: location
-    administratorLogin: 'sqladmin'
-    // IMPORTANT: Use Key Vault reference for password in production
-    // Example: kv.getSecret('sqlAdminPassword')
-    administratorLoginPassword: 'P@ssw0rd123!'  // TODO: Replace with secure reference
+    // Azure AD-only authentication (required by policy)
+    administrators: {
+      azureADOnlyAuthentication: true
+      login: 'SQL Admins'  // Azure AD group or user display name
+      sid: '00000000-0000-0000-0000-000000000000'  // TODO: Replace with your Azure AD group/user object ID
+      principalType: 'Group'  // or 'User'
+      tenantId: subscription().tenantId
+    }
     publicNetworkAccess: 'Disabled'
     minimalTlsVersion: '1.2'
     
