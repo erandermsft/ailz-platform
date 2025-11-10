@@ -151,16 +151,24 @@ print_success "Platform deploy directory ready"
 echo ""
 print_step "3" "Updating bicep references..."
 
-# Update path references in main.bicep to point to upstream deploy
+# Update path references in main.bicep to point to upstream deploy (using relative paths)
 for bicep_file in "$platform_deploy_dir/main.bicep" "$platform_deploy_dir/main-byo-vnet.bicep"; do
     if [ -f "$bicep_file" ]; then
-        # Replace relative paths to bicep/deploy with absolute path
-        sed -i.bak "s|'../../../bicep/deploy/main.bicep'|'$BICEP_ROOT/deploy/main.bicep'|g" "$bicep_file"
-        sed -i.bak "s|'../../../bicep/infra/helpers/|'$BICEP_ROOT/infra/helpers/|g" "$bicep_file"
+        # Replace platform infra paths with deploy paths (keep relative)
+        # These paths work because platform/deploy/ -> ../../bicep/deploy/
+        sed -i.bak "s|'../../../bicep/deploy/main.bicep'|'../../bicep/deploy/main.bicep'|g" "$bicep_file"
+        sed -i.bak "s|'../../../bicep/infra/helpers/|'../../bicep/infra/helpers/|g" "$bicep_file"
         rm -f "${bicep_file}.bak"
         print_gray "Updated: $(basename "$bicep_file")"
     fi
 done
+
+# Update common/types.bicep to use correct relative path
+if [ -f "$platform_deploy_dir/common/types.bicep" ]; then
+    sed -i.bak "s|'../../../../bicep/infra/common/types.bicep'|'../../../bicep/infra/common/types.bicep'|g" "$platform_deploy_dir/common/types.bicep"
+    rm -f "$platform_deploy_dir/common/types.bicep.bak"
+    print_gray "Updated: common/types.bicep"
+fi
 
 print_success "References updated"
 
