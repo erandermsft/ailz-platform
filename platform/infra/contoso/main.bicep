@@ -103,14 +103,14 @@ module appServiceNsg 'br/public:avm/res/network/network-security-group:0.5.0' = 
 
 var contosoSubnets = concat(
   deploySql ? [{
-    name: 'snet-sql'
+    name: 'sql-subnet'
     addressPrefix: '192.168.1.64/27'  // 32 IPs (192.168.1.64-95)
     networkSecurityGroupResourceId: sqlNsg.outputs.resourceId
     privateEndpointNetworkPolicies: 'Disabled'
     privateLinkServiceNetworkPolicies: 'Enabled'
   }] : [],
   deployAppService ? [{
-    name: 'snet-appservice'
+    name: 'appservice-subnet'
     addressPrefix: '192.168.1.96/27'  // 32 IPs (192.168.1.96-127)
     networkSecurityGroupResourceId: appServiceNsg.outputs.resourceId
     delegation: 'Microsoft.Web/serverFarms'
@@ -204,7 +204,7 @@ module sqlPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.0' = i
     name: 'pe-sql-${baseName}'
     location: location
     // Use AILZ private endpoint subnet
-    subnetResourceId: '${baseInfra.outputs.virtualNetworkResourceId}/subnets/snet-privateendpoints'
+    subnetResourceId: '${baseInfra.outputs.virtualNetworkResourceId}/subnets/pe-subnet'
     
     privateLinkServiceConnections: [
       {
@@ -269,7 +269,7 @@ module website 'br/public:avm/res/web/site:0.19.4' = if (deployAppService) {
     httpsOnly: true
     
     // VNet Integration for outbound traffic
-    virtualNetworkSubnetResourceId: deployAppService ? '${baseInfra.outputs.virtualNetworkResourceId}/subnets/snet-appservice' : ''
+    virtualNetworkSubnetResourceId: deployAppService ? '${baseInfra.outputs.virtualNetworkResourceId}/subnets/appservice-subnet' : ''
     
     publicNetworkAccess: 'Disabled'
     scmSiteAlsoStopped: true  
@@ -312,7 +312,7 @@ module appServicePrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9
   params: {
     name: 'pe-app-${baseName}'
     location: location
-    subnetResourceId: '${baseInfra.outputs.virtualNetworkResourceId}/subnets/snet-privateendpoints'
+    subnetResourceId: '${baseInfra.outputs.virtualNetworkResourceId}/subnets/pe-subnet'
     
     privateLinkServiceConnections: [
       {
