@@ -234,10 +234,11 @@ module serverfarm 'br/public:avm/res/web/serverfarm:0.5.0' = if (deployAppServic
   params: {
     // Required parameters
     name: 'asp-${baseName}'
+    kind: 'linux'
     // Non-required parameters
-    reserved: false  // Windows
     skuName: 'P1v3'  // Premium V3 required for VNet integration
-    skuCapacity: 2  // Minimum 2 workers required for zone redundancy
+    skuCapacity: 1   // Minimum 2 workers required for zone redundancy
+    zoneRedundant: false
     tags: {
       Environment: 'Non-Prod'
       'hidden-title': 'Contoso App Service Plan'
