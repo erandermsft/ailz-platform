@@ -1,4 +1,4 @@
-import { baseDeployToggles, contosoDeployTogglesType,resourceIdType,baseExistingVNetSubnetsDefinitionType } from 'common/types.bicep'
+import { baseDeployToggles, contosoDeployTogglesType,resourceIdType } from 'common/types.bicep'
 
 param deployToggles baseDeployToggles
 param contosoToggles contosoDeployTogglesType
@@ -155,12 +155,9 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
 module customSubnets '../../../bicep/infra/helpers/deploy-subnets-to-vnet/main.bicep' = if (deploySql || deployAppService) {
   name: 'custom-subnets-${baseName}'
   params: {
-    virtualNetworkName: last(split(baseInfra.outputs.virtualNetworkResourceId, '/'))
+    existingVNetName: last(split(baseInfra.outputs.virtualNetworkResourceId, '/'))
     subnets: contosoSubnets
   }
-  dependsOn: [
-    baseInfra
-  ]
 }
 
 // ===================================
