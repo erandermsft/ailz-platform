@@ -19,8 +19,10 @@
 set -e  # Exit on any error
 
 # Default values
-PLATFORM_ROOT="${PLATFORM_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
-BICEP_ROOT="$PLATFORM_ROOT/../../bicep"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PLATFORM_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$PLATFORM_ROOT/.." && pwd)"
+BICEP_ROOT="$REPO_ROOT/bicep"
 LOCATION="${AZURE_LOCATION:-}"
 SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID:-}"
 RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-}"
