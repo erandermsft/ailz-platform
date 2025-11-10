@@ -19,9 +19,6 @@ param baseName string = substring(resourceToken, 0, 12)
 @description('Required. Name or Resource ID of existing VNet')
 param existingVNetName string
 
-@description('Optional. Use AILZ default subnets (true) or provide custom subnets (false). Default: true')
-param useDefaultSubnets bool = true
-
 // ===================================
 // CONTOSO CUSTOM NSGS
 // ===================================
@@ -104,18 +101,66 @@ module appServiceNsg 'br/public:avm/res/network/network-security-group:0.5.0' = 
 // CONTOSO CUSTOM SUBNETS
 // ===================================
 
-var contosoCustomSubnets = concat(
+// All subnets for BYO VNet scenario (AILZ defaults + Contoso custom)
+// Must provide ALL subnets upfront when useDefaultSubnets=false
+var allSubnets = concat(
+  [
+    // AILZ Default Subnets (required for platform functionality)
+    {
+      name: 'agent-subnet'
+      addressPrefix: '192.168.0.0/25'  // 128 IPs (192.168.0.0-127)
+      delegation: 'Microsoft.App/environments'
+      serviceEndpoints: ['Microsoft.CognitiveServices']
+    }
+    {
+      name: 'pe-subnet'
+      addressPrefix: '192.168.0.128/26'  // 64 IPs (192.168.0.128-191) - MOVED to avoid conflict
+      serviceEndpoints: ['Microsoft.AzureCosmosDB']
+      privateEndpointNetworkPolicies: 'Disabled'
+    }
+    {
+      name: 'appgw-subnet'
+      addressPrefix: '192.168.0.192/26'  // 64 IPs (192.168.0.192-255)
+    }
+    {
+      name: 'AzureBastionSubnet'
+      addressPrefix: '192.168.1.0/26'  // 64 IPs (192.168.1.0-63)
+    }
+    {
+      name: 'AzureFirewallSubnet'
+      addressPrefix: '192.168.1.192/26'  // 64 IPs (192.168.1.192-255) - MOVED
+    }
+    {
+      name: 'apim-subnet'
+      addressPrefix: '192.168.1.128/27'  // 32 IPs (192.168.1.128-159)
+    }
+    {
+      name: 'jumpbox-subnet'
+      addressPrefix: '192.168.1.160/28'  // 16 IPs (192.168.1.160-175)
+    }
+    {
+      name: 'aca-env-subnet'
+      addressPrefix: '192.168.1.176/28'  // 16 IPs (192.168.1.176-191)
+      delegation: 'Microsoft.App/environments'
+      serviceEndpoints: ['Microsoft.AzureCosmosDB']
+    }
+    {
+      name: 'devops-agents-subnet'
+      addressPrefix: '192.168.1.144/28'  // 16 IPs (192.168.1.144-159) - MOVED
+    }
+  ],
+  // Contoso Custom Subnets (conditional based on toggles)
   deploySql ? [{
     name: 'sql-subnet'
     addressPrefix: '192.168.1.64/27'  // 32 IPs (192.168.1.64-95)
-    networkSecurityGroupResourceId: sqlNsg.outputs.resourceId
+    networkSecurityGroupResourceId: sqlNsg!.outputs.resourceId
     privateEndpointNetworkPolicies: 'Disabled'
     privateLinkServiceNetworkPolicies: 'Enabled'
   }] : [],
   deployAppService ? [{
     name: 'appservice-subnet'
     addressPrefix: '192.168.1.96/27'  // 32 IPs (192.168.1.96-127)
-    networkSecurityGroupResourceId: appServiceNsg.outputs.resourceId
+    networkSecurityGroupResourceId: appServiceNsg!.outputs.resourceId
     delegation: 'Microsoft.Web/serverFarms'
     privateEndpointNetworkPolicies: 'Disabled'
     privateLinkServiceNetworkPolicies: 'Enabled'
@@ -141,30 +186,13 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
     location: location
     
     // Configure subnets for existing VNet
+    // Use complete subnet list (AILZ defaults + Contoso custom) deployed upfront
     existingVNetSubnetsDefinition: {
       existingVNetName: existingVNetName
-      useDefaultSubnets: useDefaultSubnets  // true = use AILZ defaults, false = provide custom
-      // If useDefaultSubnets=false, you'd provide complete subnet list here
-      // If useDefaultSubnets=true, only additional subnets go below
-      subnets: []  // Empty when using defaults, will add custom ones separately
+      useDefaultSubnets: false  // false = provide complete subnet list
+      subnets: allSubnets  // All subnets (AILZ + Contoso) deployed together
     }
   }
-}
-
-// ===================================
-// ADD CUSTOM SUBNETS TO EXISTING VNET
-// ===================================
-
-// Add Contoso custom subnets to the existing VNet (after AILZ defaults are deployed)
-module customSubnets '../../../bicep/infra/helpers/deploy-subnets-to-vnet/main.bicep' = if (deploySql || deployAppService) {
-  name: 'custom-subnets-${baseName}'
-  params: {
-    existingVNetName: existingVNetName
-    subnets: contosoCustomSubnets
-  }
-  dependsOn: [
-    baseInfra
-  ]
 }
 
 // ===================================
@@ -200,8 +228,7 @@ module sqlServer 'br/public:avm/res/sql/server:0.9.0' = if (deploySql) {
     }
   }
   dependsOn: [
-    baseInfra
-    customSubnets  // Wait for custom subnets to be created
+    baseInfra  // Wait for subnets to be created
   ]
 }
 
@@ -307,8 +334,7 @@ module website 'br/public:avm/res/web/site:0.19.4' = if (deployAppService) {
     }
   }
   dependsOn: [
-    baseInfra
-    customSubnets  // Ensure custom subnet exists
+    baseInfra  // Ensure subnet exists
     sqlPrivateEndpoint  // Ensure SQL is accessible before app starts
   ]
 }
