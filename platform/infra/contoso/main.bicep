@@ -104,14 +104,14 @@ module appServiceNsg 'br/public:avm/res/network/network-security-group:0.5.0' = 
 var contosoSubnets = concat(
   deploySql ? [{
     name: 'snet-sql'
-    addressPrefix: '10.0.50.0/24'  // Adjust to fit your address space
+    addressPrefix: '192.168.1.64/27'  // 32 IPs (192.168.1.64-95)
     networkSecurityGroupResourceId: sqlNsg.outputs.resourceId
     privateEndpointNetworkPolicies: 'Disabled'
     privateLinkServiceNetworkPolicies: 'Enabled'
   }] : [],
   deployAppService ? [{
     name: 'snet-appservice'
-    addressPrefix: '10.0.51.0/24'  // Adjust to fit your address space
+    addressPrefix: '192.168.1.96/27'  // 32 IPs (192.168.1.96-127)
     networkSecurityGroupResourceId: appServiceNsg.outputs.resourceId
     delegation: 'Microsoft.Web/serverFarms'
     privateEndpointNetworkPolicies: 'Disabled'
@@ -136,7 +136,7 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
     // Extend VNet with Contoso custom subnets
     vNetDefinition: {
       name: 'vnet-ailz-${baseName}'
-      addressPrefixes: ['192.168.0.0/23']  // Adjust to your address space
+      addressPrefixes: ['192.168.0.0/22']  // Matches upstream AILZ default (1024 IPs)
       subnets: contosoSubnets  // Custom subnets get merged with upstream defaults
     }
   }
