@@ -14,9 +14,9 @@ type baseExistingVNetSubnetsDefinitionType = existingVNetSubnetsDefinitionType
 @export()
 @description('Contoso-specific deployment toggles (use alongside baseDeployToggles).')
 type contosoDeployTogglesType = {
-  @description('Optional. Toggle to deploy App Service')
+  @description('Optional. Toggle to deploy App Service with VNet integration')
   appService: bool?
 
-  @description('Optional. Toggle to deploy Azure SQL')
-  sql: bool?
+  @description('Optional. Toggle to deploy Azure SQL Server with private endpoint')
+  azureSql: bool?
 }
