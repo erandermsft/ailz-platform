@@ -40,7 +40,9 @@ var byoDefaultSubnets = concat(
       addressPrefix: '192.168.0.0/25'
       delegation: 'Microsoft.App/environments'
       serviceEndpoints: [
-        'Microsoft.CognitiveServices'
+        {
+          service: 'Microsoft.CognitiveServices'
+        }
       ]
     }
     {
@@ -48,7 +50,9 @@ var byoDefaultSubnets = concat(
       addressPrefix: '192.168.1.64/27'
       privateEndpointNetworkPolicies: 'Disabled'
       serviceEndpoints: [
-        'Microsoft.AzureCosmosDB'
+        {
+          service: 'Microsoft.AzureCosmosDB'
+        }
       ]
     }
     {
@@ -80,7 +84,9 @@ var byoDefaultSubnets = concat(
       addressPrefix: '192.168.1.112/28'
       delegation: 'Microsoft.App/environments'
       serviceEndpoints: [
-        'Microsoft.AzureCosmosDB'
+        {
+          service: 'Microsoft.AzureCosmosDB'
+        }
       ]
     }
     {
