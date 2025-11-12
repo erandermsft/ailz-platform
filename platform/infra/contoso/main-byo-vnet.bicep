@@ -33,6 +33,9 @@ var existingVNetNameForSubnets = existingVNetSubscriptionId == subscription().su
 
 var includeApimSubnet = deployToggles.?apiManagement ?? false
 
+var includeSqlSubnet = deploySql
+var includeAppServiceSubnet = deployAppService
+
 var byoDefaultSubnets = concat(
   [
     {
@@ -93,7 +96,24 @@ var byoDefaultSubnets = concat(
       name: 'devops-agents-subnet'
       addressPrefix: '192.168.1.128/28'
     }
-  ]
+  ],
+  includeSqlSubnet ? [
+    {
+      name: 'sql-subnet'
+      addressPrefix: '192.168.2.0/27'
+      privateEndpointNetworkPolicies: 'Disabled'
+      privateLinkServiceNetworkPolicies: 'Enabled'
+    }
+  ] : [],
+  includeAppServiceSubnet ? [
+    {
+      name: 'appservice-subnet'
+      addressPrefix: '192.168.2.32/27'
+      privateEndpointNetworkPolicies: 'Disabled'
+      privateLinkServiceNetworkPolicies: 'Enabled'
+      delegation: 'Microsoft.Web/serverFarms'
+    }
+  ] : []
 )
 
 // ===================================
