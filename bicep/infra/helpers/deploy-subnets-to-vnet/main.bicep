@@ -16,7 +16,10 @@ resource existingVNet 'Microsoft.Network/virtualNetworks@2023-11-01' existing = 
   name: vnetName
 }
 
-// Deploy each subnet to the existing VNet
+// Deploy each subnet to the existing VNet. Azure networking allows only one subnet
+// update at a time, so batchSize(1) keeps the operations sequential and avoids
+// "Another operation in progress" errors when reconciling large subnet lists.
+@batchSize(1)
 resource deployedSubnets 'Microsoft.Network/virtualNetworks/subnets@2023-11-01' = [for (subnet, index) in subnets: {
   name: subnet.name
   parent: existingVNet
