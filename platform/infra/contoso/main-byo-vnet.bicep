@@ -19,6 +19,69 @@ param baseName string = substring(resourceToken, 0, 12)
 @description('Required. Name or Resource ID of existing VNet (with subnets already created)')
 param existingVNetName string
 
+var existingVNetResourceId = contains(existingVNetName, '/')
+  ? existingVNetName
+  : resourceId('Microsoft.Network/virtualNetworks', existingVNetName)
+
+var includeApimSubnet = deployToggles.?apiManagement ?? false
+
+var byoDefaultSubnets = concat(
+  [
+    {
+      name: 'agent-subnet'
+      addressPrefix: '192.168.0.0/25'
+      delegation: 'Microsoft.App/environments'
+      serviceEndpoints: [
+        'Microsoft.CognitiveServices'
+      ]
+    }
+    {
+      name: 'pe-subnet'
+      addressPrefix: '192.168.0.128/26'
+      privateEndpointNetworkPolicies: 'Disabled'
+      serviceEndpoints: [
+        'Microsoft.AzureCosmosDB'
+      ]
+    }
+    {
+      name: 'appgw-subnet'
+      addressPrefix: '192.168.0.192/26'
+    }
+    {
+      name: 'AzureBastionSubnet'
+      addressPrefix: '192.168.1.0/26'
+    }
+    {
+      name: 'AzureFirewallSubnet'
+      addressPrefix: '192.168.1.192/26'
+    }
+  ],
+  includeApimSubnet ? [
+    {
+      name: 'apim-subnet'
+      addressPrefix: '192.168.1.128/27'
+    }
+  ] : [],
+  [
+    {
+      name: 'jumpbox-subnet'
+      addressPrefix: '192.168.1.160/28'
+    }
+    {
+      name: 'aca-env-subnet'
+      addressPrefix: '192.168.1.176/28'
+      delegation: 'Microsoft.App/environments'
+      serviceEndpoints: [
+        'Microsoft.AzureCosmosDB'
+      ]
+    }
+    {
+      name: 'devops-agents-subnet'
+      addressPrefix: '192.168.1.112/28'
+    }
+  ]
+)
+
 // ===================================
 // BYO VNET CONFIGURATION
 // ===================================
@@ -32,11 +95,14 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       virtualNetwork: false  // Don't create new VNet - use existing
     })
     resourceIds: union(resourceIds, {
-      virtualNetworkResourceId: contains(existingVNetName, '/') 
-        ? existingVNetName  // Full resource ID provided
-        : resourceId('Microsoft.Network/virtualNetworks', existingVNetName)  // Just name provided
+      virtualNetworkResourceId: existingVNetResourceId
     })
     location: location
+    existingVNetSubnetsDefinition: {
+      existingVNetName: existingVNetResourceId
+      useDefaultSubnets: false
+      subnets: byoDefaultSubnets
+    }
     
     // AILZ will use existing subnets (no subnet creation)
     // Subnets must already exist in the VNet:

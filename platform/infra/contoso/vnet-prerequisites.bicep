@@ -21,6 +21,86 @@ param sqlNsgResourceId string = ''
 param appServiceNsgResourceId string = ''
 
 
+var sqlNsgProvided = length(trim(sqlNsgResourceId)) > 0
+var appServiceNsgProvided = length(trim(appServiceNsgResourceId)) > 0
+
+resource sqlNsg 'Microsoft.Network/networkSecurityGroups@2023-11-01' = if (deploySql && !sqlNsgProvided) {
+  name: 'nsg-sql-${vnetName}'
+  location: location
+  properties: {
+    securityRules: [
+      {
+        name: 'AllowVnetInbound'
+        properties: {
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: 'VirtualNetwork'
+          destinationAddressPrefix: '*'
+          access: 'Allow'
+          priority: 100
+          direction: 'Inbound'
+        }
+      }
+      {
+        name: 'DenyAllInbound'
+        properties: {
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+          access: 'Deny'
+          priority: 4096
+          direction: 'Inbound'
+        }
+      }
+    ]
+  }
+}
+
+resource appServiceNsg 'Microsoft.Network/networkSecurityGroups@2023-11-01' = if (deployAppService && !appServiceNsgProvided) {
+  name: 'nsg-appservice-${vnetName}'
+  location: location
+  properties: {
+    securityRules: [
+      {
+        name: 'AllowAppServiceManagement'
+        properties: {
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          destinationPortRanges: [
+            '454'
+            '455'
+          ]
+          sourceAddressPrefix: 'AppServiceManagement'
+          destinationAddressPrefix: '*'
+          access: 'Allow'
+          priority: 100
+          direction: 'Inbound'
+        }
+      }
+      {
+        name: 'AllowVnetInbound'
+        properties: {
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: 'VirtualNetwork'
+          destinationAddressPrefix: '*'
+          access: 'Allow'
+          priority: 200
+          direction: 'Inbound'
+        }
+      }
+    ]
+  }
+}
+
+var sqlSubnetNsgId = deploySql ? (sqlNsgProvided ? sqlNsgResourceId : sqlNsg.id) : ''
+var appServiceSubnetNsgId = deployAppService ? (appServiceNsgProvided ? appServiceNsgResourceId : appServiceNsg.id) : ''
+
+
 
 resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   name: vnetName
@@ -129,8 +209,8 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
             addressPrefix: '192.168.1.64/27'  // 32 IPs (192.168.1.64-95)
             privateEndpointNetworkPolicies: 'Disabled'
             privateLinkServiceNetworkPolicies: 'Enabled'
-            networkSecurityGroup: !empty(sqlNsgResourceId) ? {
-              id: sqlNsgResourceId
+            networkSecurityGroup: sqlSubnetNsgId != '' ? {
+              id: sqlSubnetNsgId
             } : null
           }
         }
@@ -150,8 +230,8 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
                 }
               }
             ]
-            networkSecurityGroup: !empty(appServiceNsgResourceId) ? {
-              id: appServiceNsgResourceId
+            networkSecurityGroup: appServiceSubnetNsgId != '' ? {
+              id: appServiceSubnetNsgId
             } : null
           }
         }
