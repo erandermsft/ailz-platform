@@ -137,6 +137,11 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       useDefaultSubnets: false
       subnets: byoDefaultSubnets
     }
+    aiSearchDefinition: deployToggles.searchService ? {
+      name: 'search-${baseName}'
+      sku: 'standard'
+      replicaCount: 1
+    } : null
     
     // AILZ will use existing subnets (no subnet creation)
     // Subnets must already exist in the VNet:
