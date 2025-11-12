@@ -136,7 +136,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
         {
           name: 'pe-subnet'
           properties: {
-            addressPrefix: '192.168.0.128/26'  // 64 IPs (192.168.0.128-191)
+            addressPrefix: '192.168.1.64/27'  // 32 IPs (192.168.1.64-95)
             privateEndpointNetworkPolicies: 'Disabled'
             serviceEndpoints: [
               {
@@ -148,37 +148,37 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
         {
           name: 'appgw-subnet'
           properties: {
-            addressPrefix: '192.168.0.192/26'  // 64 IPs (192.168.0.192-255)
+            addressPrefix: '192.168.0.128/26'  // 64 IPs (192.168.0.128-191)
           }
         }
         {
           name: 'AzureBastionSubnet'
           properties: {
-            addressPrefix: '192.168.1.0/26'  // 64 IPs (192.168.1.0-63)
+            addressPrefix: '192.168.0.192/26'  // 64 IPs (192.168.0.192-255)
           }
         }
         {
           name: 'devops-agents-subnet'
           properties: {
-            addressPrefix: '192.168.1.112/28'  // 16 IPs (192.168.1.112-127)
+            addressPrefix: '192.168.1.128/28'  // 16 IPs (192.168.1.128-143)
           }
         }
         {
           name: 'apim-subnet'
           properties: {
-            addressPrefix: '192.168.1.128/27'  // 32 IPs (192.168.1.128-159)
+            addressPrefix: '192.168.1.160/27'  // 32 IPs (192.168.1.160-191)
           }
         }
         {
           name: 'jumpbox-subnet'
           properties: {
-            addressPrefix: '192.168.1.160/28'  // 16 IPs (192.168.1.160-175)
+            addressPrefix: '192.168.1.96/28'  // 16 IPs (192.168.1.96-111)
           }
         }
         {
           name: 'aca-env-subnet'
           properties: {
-            addressPrefix: '192.168.1.176/28'  // 16 IPs (192.168.1.176-191)
+            addressPrefix: '192.168.1.112/28'  // 16 IPs (192.168.1.112-127)
             delegations: [
               {
                 name: 'Microsoft.App.environments'
@@ -197,7 +197,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
         {
           name: 'AzureFirewallSubnet'
           properties: {
-            addressPrefix: '192.168.1.192/26'  // 64 IPs (192.168.1.192-255)
+            addressPrefix: '192.168.1.0/26'  // 64 IPs (192.168.1.0-63)
           }
         }
       ],
@@ -206,7 +206,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
         {
           name: 'sql-subnet'
           properties: {
-            addressPrefix: '192.168.1.64/27'  // 32 IPs (192.168.1.64-95)
+            addressPrefix: '192.168.2.0/27'  // 32 IPs (192.168.2.0-31)
             privateEndpointNetworkPolicies: 'Disabled'
             privateLinkServiceNetworkPolicies: 'Enabled'
             networkSecurityGroup: sqlSubnetNsgId != '' ? {
@@ -219,7 +219,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
         {
           name: 'appservice-subnet'
           properties: {
-            addressPrefix: '192.168.1.96/27'  // 32 IPs (192.168.1.96-127)
+            addressPrefix: '192.168.2.32/27'  // 32 IPs (192.168.2.32-63)
             privateEndpointNetworkPolicies: 'Disabled'
             privateLinkServiceNetworkPolicies: 'Enabled'
             delegations: [

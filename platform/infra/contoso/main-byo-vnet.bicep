@@ -23,6 +23,14 @@ var existingVNetResourceId = contains(existingVNetName, '/')
   ? existingVNetName
   : resourceId('Microsoft.Network/virtualNetworks', existingVNetName)
 
+var existingVNetIdSegments = split(existingVNetResourceId, '/')
+var existingVNetSubscriptionId = length(existingVNetIdSegments) >= 3 ? existingVNetIdSegments[2] : subscription().subscriptionId
+var existingVNetResourceGroupName = length(existingVNetIdSegments) >= 5 ? existingVNetIdSegments[4] : resourceGroup().name
+var existingVNetNameOnly = length(existingVNetIdSegments) > 0 ? last(existingVNetIdSegments) : existingVNetName
+var existingVNetNameForSubnets = existingVNetSubscriptionId == subscription().subscriptionId && existingVNetResourceGroupName == resourceGroup().name
+  ? existingVNetNameOnly
+  : existingVNetResourceId
+
 var includeApimSubnet = deployToggles.?apiManagement ?? false
 
 var byoDefaultSubnets = concat(
@@ -37,7 +45,7 @@ var byoDefaultSubnets = concat(
     }
     {
       name: 'pe-subnet'
-      addressPrefix: '192.168.0.128/26'
+      addressPrefix: '192.168.1.64/27'
       privateEndpointNetworkPolicies: 'Disabled'
       serviceEndpoints: [
         'Microsoft.AzureCosmosDB'
@@ -45,31 +53,31 @@ var byoDefaultSubnets = concat(
     }
     {
       name: 'appgw-subnet'
-      addressPrefix: '192.168.0.192/26'
+      addressPrefix: '192.168.0.128/26'
     }
     {
       name: 'AzureBastionSubnet'
-      addressPrefix: '192.168.1.0/26'
+      addressPrefix: '192.168.0.192/26'
     }
     {
       name: 'AzureFirewallSubnet'
-      addressPrefix: '192.168.1.192/26'
+      addressPrefix: '192.168.1.0/26'
     }
   ],
   includeApimSubnet ? [
     {
       name: 'apim-subnet'
-      addressPrefix: '192.168.1.128/27'
+      addressPrefix: '192.168.1.160/27'
     }
   ] : [],
   [
     {
       name: 'jumpbox-subnet'
-      addressPrefix: '192.168.1.160/28'
+      addressPrefix: '192.168.1.96/28'
     }
     {
       name: 'aca-env-subnet'
-      addressPrefix: '192.168.1.176/28'
+      addressPrefix: '192.168.1.112/28'
       delegation: 'Microsoft.App/environments'
       serviceEndpoints: [
         'Microsoft.AzureCosmosDB'
@@ -77,7 +85,7 @@ var byoDefaultSubnets = concat(
     }
     {
       name: 'devops-agents-subnet'
-      addressPrefix: '192.168.1.112/28'
+      addressPrefix: '192.168.1.128/28'
     }
   ]
 )
@@ -99,7 +107,7 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
     })
     location: location
     existingVNetSubnetsDefinition: {
-      existingVNetName: existingVNetResourceId
+      existingVNetName: existingVNetNameForSubnets
       useDefaultSubnets: false
       subnets: byoDefaultSubnets
     }
