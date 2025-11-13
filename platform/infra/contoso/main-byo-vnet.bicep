@@ -25,6 +25,14 @@ var existingVNetResourceId = contains(existingVNetName, '/')
   ? existingVNetName
   : resourceId('Microsoft.Network/virtualNetworks', existingVNetName)
 
+var existingVNetIdSegments = split(existingVNetResourceId, '/')
+var existingVNetSubscriptionId = length(existingVNetIdSegments) >= 3 ? existingVNetIdSegments[2] : subscription().subscriptionId
+var existingVNetResourceGroupName = length(existingVNetIdSegments) >= 5 ? existingVNetIdSegments[4] : resourceGroup().name
+var existingVNetNameOnly = length(existingVNetIdSegments) > 0 ? last(existingVNetIdSegments) : existingVNetName
+var existingVNetNameForSubnets = existingVNetSubscriptionId == subscription().subscriptionId && existingVNetResourceGroupName == resourceGroup().name
+  ? existingVNetNameOnly
+  : existingVNetResourceId
+
 var includeSqlSubnet = deploySql
 var includeAppServiceSubnet = deployAppService
 
@@ -93,9 +101,9 @@ var byoDefaultSubnets = concat(
 // ===================================
 
 resource vnet 'Microsoft.Network/virtualNetworks@2024-10-01' existing = {
-  name: existingVNetName
+  name: existingVNetNameOnly
+  scope: resourceGroup(existingVNetSubscriptionId, existingVNetResourceGroupName)
 }
-
 // Reference the base AILZ infrastructure with existing VNet
 // IMPORTANT: VNet and all subnets must already exist (deploy vnet-prerequisites.bicep first)
 module baseInfra '../../../bicep/deploy/main.bicep' = {
@@ -136,7 +144,7 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
     })
     location: location
     existingVNetSubnetsDefinition: {
-      existingVNetName: existingVNetName
+      existingVNetName: existingVNetNameForSubnets
       useDefaultSubnets: false
       subnets: byoDefaultSubnets
     }
