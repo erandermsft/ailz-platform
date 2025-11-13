@@ -14,7 +14,7 @@ param tags object = {}
 
 @description('Optional. Address prefixes for the VNet address space.')
 param addressPrefixes array = [
-  '192.168.0.0/22'
+  '192.168.0.0/24'
 ]
 
 resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
