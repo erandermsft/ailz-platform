@@ -22,6 +22,7 @@ variable "RANDOM" {
 variable "GITHUB_ORG" {
   description = "GitHub organization name"
   type        = string
+  default = "value"
 }
 
 

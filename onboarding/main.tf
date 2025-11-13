@@ -23,6 +23,8 @@ locals {
   }
 }
 
+// Create a GitHub Repository
+
 resource "github_repository" "ailz-repo" {
   name        = "az-ailz-${var.APPID}-${var.RANDOM}"
   description = "Repository for Azure AI Landing Zone - ${var.APPID} - ${var.RANDOM}"
