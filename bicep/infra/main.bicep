@@ -2940,8 +2940,8 @@ param jumpVmAdminPassword string = '${toUpper(substring(replace(newGuid(), '-', 
 var varDeployJumpVm = deployToggles.?jumpVm ?? false
 var varJumpVmMaintenanceConfigured = varDeployJumpVm && (jumpVmMaintenanceDefinition != null)
 var varJumpSubnetId = empty(resourceIds.?virtualNetworkResourceId!)
-  ? '${virtualNetworkResourceId}/subnets/agent-subnet'
-  : '${resourceIds.virtualNetworkResourceId!}/subnets/agent-subnet'
+  ? '${virtualNetworkResourceId}/subnets/jumpbox-subnet'
+  : '${resourceIds.virtualNetworkResourceId!}/subnets/jumpbox-subnet'
 
 module jumpVmMaintenanceConfiguration 'wrappers/avm.res.maintenance.maintenance-configuration.bicep' = if (varJumpVmMaintenanceConfigured) {
   name: 'jumpVmMaintenanceConfigurationDeployment-${varUniqueSuffix}'
