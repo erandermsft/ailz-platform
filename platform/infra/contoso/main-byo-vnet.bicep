@@ -41,11 +41,11 @@ var includeJumpBoxAndBastionSubnet = deployJumpBox
 //'192.168.0.0/24'
 var baseAddressPrefix = vnet.properties.addressSpace.addressPrefixes[0]
 
-var privateEndpointSubnetCidr = cidrSubnet(baseAddressPrefix, 3, 0)
-var appServiceSubnetCidr = cidrSubnet(baseAddressPrefix, 3, 1)
-var sqlSubnetCidr = cidrSubnet(baseAddressPrefix, 3, 2)
-var jumpboxSubnetCidr = cidrSubnet(baseAddressPrefix, 3, 3)
-var azureBastionSubnetCidr = cidrSubnet(baseAddressPrefix, 3, 4)
+var privateEndpointSubnetCidr = cidrSubnet(baseAddressPrefix, 27, 0)
+var appServiceSubnetCidr = cidrSubnet(baseAddressPrefix, 27, 1)
+var sqlSubnetCidr = cidrSubnet(baseAddressPrefix, 27, 2)
+var jumpboxSubnetCidr = cidrSubnet(baseAddressPrefix, 27, 3)
+var azureBastionSubnetCidr = cidrSubnet(baseAddressPrefix, 27, 4)
 
 var byoDefaultSubnets = concat(
   [],
