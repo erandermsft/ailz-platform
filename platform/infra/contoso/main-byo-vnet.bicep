@@ -1,11 +1,13 @@
-import { baseDeployToggles, contosoDeployTogglesType,resourceIdType } from 'common/types.bicep'
+import { contosoDeployTogglesType, resourceIdType } from 'common/types.bicep'
 
-param deployToggles baseDeployToggles
+// param deployToggles baseDeployToggles
 param contosoToggles contosoDeployTogglesType
 param resourceIds resourceIdType
 
 var deployAppService = contosoToggles.?appService ?? false
 var deploySql = contosoToggles.?azureSql ?? false
+var deployJumpBox = contosoToggles.jumpBox ?? false
+var deploySearch = contosoToggles.searchService ?? false
 
 @description('Optional. Location')
 param location string = 'swedencentral'
@@ -23,34 +25,49 @@ var existingVNetResourceId = contains(existingVNetName, '/')
   ? existingVNetName
   : resourceId('Microsoft.Network/virtualNetworks', existingVNetName)
 
-var existingVNetIdSegments = split(existingVNetResourceId, '/')
-var existingVNetSubscriptionId = length(existingVNetIdSegments) >= 3 ? existingVNetIdSegments[2] : subscription().subscriptionId
-var existingVNetResourceGroupName = length(existingVNetIdSegments) >= 5 ? existingVNetIdSegments[4] : resourceGroup().name
-var existingVNetNameOnly = length(existingVNetIdSegments) > 0 ? last(existingVNetIdSegments) : existingVNetName
-var existingVNetNameForSubnets = existingVNetSubscriptionId == subscription().subscriptionId && existingVNetResourceGroupName == resourceGroup().name
-  ? existingVNetNameOnly
-  : existingVNetResourceId
-
-var includeApimSubnet = deployToggles.?apiManagement ?? false
-
 var includeSqlSubnet = deploySql
 var includeAppServiceSubnet = deployAppService
 
+var includeJumpBoxAndBastionSubnet = deployJumpBox
+
+//'192.168.0.0/24'
+var baseAddressPrefix = vnet.properties.addressSpace.addressPrefixes[0]
+
+var privateEndpointSubnetCidr = cidrSubnet(baseAddressPrefix, 3, 0)
+var appServiceSubnetCidr = cidrSubnet(baseAddressPrefix, 3, 1)
+var sqlSubnetCidr = cidrSubnet(baseAddressPrefix, 3, 2)
+var jumpboxSubnetCidr = cidrSubnet(baseAddressPrefix, 3, 3)
+var azureBastionSubnetCidr = cidrSubnet(baseAddressPrefix, 3, 4)
+
 var byoDefaultSubnets = concat(
-  [
-    {
-      name: 'agent-subnet'
-      addressPrefix: '192.168.0.0/25'
-      delegation: 'Microsoft.App/environments'
-      serviceEndpoints: [
+  [],
+  includeJumpBoxAndBastionSubnet
+    ? [
         {
-          service: 'Microsoft.CognitiveServices'
+          name: 'jumpbox-subnet'
+          addressPrefix: jumpboxSubnetCidr
+        }
+        {
+          name: 'AzureBastionSubnet'
+          addressPrefix: azureBastionSubnetCidr
         }
       ]
-    }
+    : [],
+  includeAppServiceSubnet
+    ? [
+        {
+          name: 'appservice-subnet'
+          addressPrefix: appServiceSubnetCidr
+          privateEndpointNetworkPolicies: 'Disabled'
+          privateLinkServiceNetworkPolicies: 'Enabled'
+          delegation: 'Microsoft.Web/serverFarms'
+        }
+      ]
+    : [],
+  [
     {
       name: 'pe-subnet'
-      addressPrefix: '192.168.1.64/27'
+      addressPrefix: privateEndpointSubnetCidr
       privateEndpointNetworkPolicies: 'Disabled'
       serviceEndpoints: [
         {
@@ -58,91 +75,78 @@ var byoDefaultSubnets = concat(
         }
       ]
     }
-    {
-      name: 'appgw-subnet'
-      addressPrefix: '192.168.0.128/26'
-    }
-    {
-      name: 'AzureBastionSubnet'
-      addressPrefix: '192.168.0.192/26'
-    }
-    {
-      name: 'AzureFirewallSubnet'
-      addressPrefix: '192.168.1.0/26'
-    }
   ],
-  includeApimSubnet ? [
-    {
-      name: 'apim-subnet'
-      addressPrefix: '192.168.1.160/27'
-    }
-  ] : [],
-  [
-    {
-      name: 'jumpbox-subnet'
-      addressPrefix: '192.168.1.96/28'
-    }
-    {
-      name: 'aca-env-subnet'
-      addressPrefix: '192.168.1.112/28'
-      delegation: 'Microsoft.App/environments'
-      serviceEndpoints: [
+  includeSqlSubnet
+    ? [
         {
-          service: 'Microsoft.AzureCosmosDB'
+          name: 'sql-subnet'
+          addressPrefix: sqlSubnetCidr
+          privateEndpointNetworkPolicies: 'Disabled'
+          privateLinkServiceNetworkPolicies: 'Enabled'
         }
       ]
-    }
-    {
-      name: 'devops-agents-subnet'
-      addressPrefix: '192.168.1.128/28'
-    }
-  ],
-  includeSqlSubnet ? [
-    {
-      name: 'sql-subnet'
-      addressPrefix: '192.168.2.0/27'
-      privateEndpointNetworkPolicies: 'Disabled'
-      privateLinkServiceNetworkPolicies: 'Enabled'
-    }
-  ] : [],
-  includeAppServiceSubnet ? [
-    {
-      name: 'appservice-subnet'
-      addressPrefix: '192.168.2.32/27'
-      privateEndpointNetworkPolicies: 'Disabled'
-      privateLinkServiceNetworkPolicies: 'Enabled'
-      delegation: 'Microsoft.Web/serverFarms'
-    }
-  ] : []
+    : []
 )
 
 // ===================================
 // BYO VNET CONFIGURATION
 // ===================================
 
+resource vnet 'Microsoft.Network/virtualNetworks@2024-10-01' existing = {
+  name: existingVNetName
+}
+
 // Reference the base AILZ infrastructure with existing VNet
 // IMPORTANT: VNet and all subnets must already exist (deploy vnet-prerequisites.bicep first)
 module baseInfra '../../../bicep/deploy/main.bicep' = {
   name: 'ailz-base-infrastructure'
   params: {
-    deployToggles: union(deployToggles, {
-      virtualNetwork: false  // Don't create new VNet - use existing
-    })
+    deployToggles: {
+      virtualNetwork: false // Don't create new VNet - use existing
+      acaEnvironmentNsg: false
+      agentNsg: true
+      apiManagement: false
+      apiManagementNsg: false
+      appConfig: true
+      appInsights: true
+      applicationGateway: false
+      applicationGatewayNsg: false
+      applicationGatewayPublicIp: false
+      bastionHost: true
+      bastionNsg: true
+      buildVm: false
+      containerApps: false
+      containerEnv: false
+      containerRegistry: true
+      cosmosDb: false
+      devopsBuildAgentsNsg: false
+      firewall: false
+      groundingWithBingSearch: true
+      jumpVm: true
+      jumpboxNsg: true
+      keyVault: true
+      logAnalytics: true
+      peNsg: true
+      searchService: true
+      storageAccount: true
+      virtualNetwork: false
+      wafPolicy: false
+    }
     resourceIds: union(resourceIds, {
       virtualNetworkResourceId: existingVNetResourceId
     })
     location: location
     existingVNetSubnetsDefinition: {
-      existingVNetName: existingVNetNameForSubnets
+      existingVNetName: existingVNetName
       useDefaultSubnets: false
       subnets: byoDefaultSubnets
     }
-    aiSearchDefinition: deployToggles.searchService ? {
+    aiSearchDefinition: deploySearch ? {
       name: 'search-${baseName}'
       sku: 'standard'
       replicaCount: 1
-    } : null
-    
+    } : {}
+
     // AILZ will use existing subnets (no subnet creation)
     // Subnets must already exist in the VNet:
     // - agent-subnet, pe-subnet, appgw-subnet, AzureBastionSubnet, AzureFirewallSubnet
@@ -163,14 +167,14 @@ module sqlServer 'br/public:avm/res/sql/server:0.9.0' = if (deploySql) {
     // Azure AD-only authentication (required by policy)
     administrators: {
       azureADOnlyAuthentication: true
-      login: 'SQL Admins'  // Azure AD group or user display name
-      sid: '00000000-0000-0000-0000-000000000000'  // TODO: Replace with your Azure AD group/user object ID
-      principalType: 'Group'  // or 'User'
+      login: 'SQL Admins' // Azure AD group or user display name
+      sid: '00000000-0000-0000-0000-000000000000' // TODO: Replace with your Azure AD group/user object ID
+      principalType: 'Group' // or 'User'
       tenantId: subscription().tenantId
     }
     publicNetworkAccess: 'Disabled'
     minimalTlsVersion: '1.2'
-    
+
     databases: [
       {
         name: 'db-contoso'
@@ -178,13 +182,13 @@ module sqlServer 'br/public:avm/res/sql/server:0.9.0' = if (deploySql) {
         skuTier: 'Basic'
       }
     ]
-    
+
     managedIdentities: {
       systemAssigned: true
     }
   }
   dependsOn: [
-    baseInfra  // Wait for subnets to be created
+    baseInfra // Wait for subnets to be created
   ]
 }
 
@@ -196,7 +200,7 @@ module sqlPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.0' = i
     location: location
     // Use AILZ private endpoint subnet (created by baseInfra with default subnets)
     subnetResourceId: '${baseInfra.outputs.virtualNetworkResourceId}/subnets/pe-subnet'
-    
+
     privateLinkServiceConnections: [
       {
         name: 'sql-connection'
@@ -206,7 +210,7 @@ module sqlPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.0' = i
         }
       }
     ]
-    
+
     // TODO: Integrate with AILZ-managed Private DNS Zone if available
     customNetworkInterfaceName: 'nic-pe-sql-${baseName}'
   }
@@ -224,9 +228,9 @@ module serverfarm 'br/public:avm/res/web/serverfarm:0.5.0' = if (deployAppServic
     name: 'asp-${baseName}'
     // Non-required parameters
     kind: 'linux'
-    zoneRedundant:false
-    skuName: 'P1v3'  // Premium V3 required for VNet integration
-    skuCapacity: 1  // Minimum 2 workers required for zone redundancy
+    zoneRedundant: false
+    skuName: 'P1v3' // Premium V3 required for VNet integration
+    skuCapacity: 1 // Minimum 2 workers required for zone redundancy
     tags: {
       Environment: 'Non-Prod'
       'hidden-title': 'Contoso App Service Plan'
@@ -242,7 +246,7 @@ module website 'br/public:avm/res/web/site:0.19.4' = if (deployAppService) {
     kind: 'app'
     name: 'app-${baseName}'
     serverFarmResourceId: deployAppService ? serverfarm.outputs.resourceId : ''
-    
+
     // Non-required parameters
     location: location
     basicPublishingCredentialsPolicies: [
@@ -256,12 +260,14 @@ module website 'br/public:avm/res/web/site:0.19.4' = if (deployAppService) {
       }
     ]
     httpsOnly: true
-    
+
     // VNet Integration for outbound traffic
-    virtualNetworkSubnetResourceId: deployAppService ? '${baseInfra.outputs.virtualNetworkResourceId}/subnets/appservice-subnet' : ''
-    
+    virtualNetworkSubnetResourceId: deployAppService
+      ? '${baseInfra.outputs.virtualNetworkResourceId}/subnets/appservice-subnet'
+      : ''
+
     publicNetworkAccess: 'Disabled'
-    scmSiteAlsoStopped: true  
+    scmSiteAlsoStopped: true
     siteConfig: {
       alwaysOn: true
       ftpsState: 'FtpsOnly'
@@ -273,25 +279,27 @@ module website 'br/public:avm/res/web/site:0.19.4' = if (deployAppService) {
         }
       ]
       minTlsVersion: '1.2'
-      vnetRouteAllEnabled: true  // Force all traffic through VNet
+      vnetRouteAllEnabled: true // Force all traffic through VNet
       http20Enabled: true
       // SQL Connection String (using managed identity)
-      connectionStrings: deploySql ? [
-        {
-          name: 'DefaultConnection'
-          connectionString: 'Server=tcp:sql-${baseName}.database.windows.net,1433;Database=db-contoso;Authentication=Active Directory Managed Identity;'
-          type: 'SQLAzure'
-        }
-      ] : []
+      connectionStrings: deploySql
+        ? [
+            {
+              name: 'DefaultConnection'
+              connectionString: 'Server=tcp:sql-${baseName}.database.windows.net,1433;Database=db-contoso;Authentication=Active Directory Managed Identity;'
+              type: 'SQLAzure'
+            }
+          ]
+        : []
     }
-    
+
     managedIdentities: {
       systemAssigned: true
     }
   }
   dependsOn: [
-    baseInfra  // Ensure subnet exists
-    sqlPrivateEndpoint  // Ensure SQL is accessible before app starts
+    baseInfra // Ensure subnet exists
+    sqlPrivateEndpoint // Ensure SQL is accessible before app starts
   ]
 }
 
@@ -302,7 +310,7 @@ module appServicePrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9
     name: 'pe-app-${baseName}'
     location: location
     subnetResourceId: '${baseInfra.outputs.virtualNetworkResourceId}/subnets/pe-subnet'
-    
+
     privateLinkServiceConnections: [
       {
         name: 'appservice-connection'
@@ -312,7 +320,7 @@ module appServicePrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9
         }
       }
     ]
-    
+
     // TODO: Integrate with AILZ-managed Private DNS Zone if available
     customNetworkInterfaceName: 'nic-pe-app-${baseName}'
   }
