@@ -1,38 +1,82 @@
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 3.0"
+    }
+    azuread = {
+      source  = "hashicorp/azuread"
+      version = "~> 2.0"
+    }
+    github = {
+      source  = "integrations/github"
+      version = "~> 5.0"
+    }
+  }
+}
+
+locals {
+  geo = {
+    swdn = {
+      location = "swedencentral"
+    }
+  }
+}
+
 resource "github_repository" "ailz-repo" {
   name        = "az-ailz-${var.APPID}-${var.RANDOM}"
   description = "Repository for Azure AI Landing Zone - ${var.APPID} - ${var.RANDOM}"
   auto_init   = true
-  visibility = "private"
+  visibility  = "private"
 }
 
-resource "azurerm_user_assigned_identity" "ai-lz-umi" {
-  provider            = azurerm.onboarded
-  name                = "umi-${var.APPID}-${var.RANDOM}"
-  location            = local.geo["${var.GEO}"].location
-  resource_group_name = azurerm_resource_group.rg-ai-core-infra.name
-  lifecycle {
-    ignore_changes = [
-      tags
-    ]
-  }
+// Creating Azure AD Application and Service Principal
+
+data "azuread_client_config" "current" {}
+
+resource "azuread_application" "ai-lz-app" {
+  display_name = "app-${var.APPID}-${var.RANDOM}"
+  owners       = [data.azuread_client_config.current.object_id]
 }
 
-resource "azurerm_federated_identity_credential" "fc_ai-lz-umi_github" {
-  provider = azurerm.onboarded
-  audience = [
-    "api://AzureADTokenExchange"
+resource "azuread_service_principal" "ai-lz-sp" {
+  client_id = azuread_application.ai-lz-app.client_id
+  owners    = [data.azuread_client_config.current.object_id]
+}
+
+// Role Assignment to the Service Principal
+
+resource "azurerm_role_assignment" "ai-lz-sp-role-assignment" {
+  scope                            = "/subscriptions/${var.ONBOARD_SUB_ID}"
+  role_definition_name             = "Contributor"
+  principal_id                     = azuread_service_principal.ai-lz-sp.object_id
+  skip_service_principal_aad_check = true
+
+  depends_on = [
+    azuread_service_principal.ai-lz-sp
   ]
-  issuer              = "https://token.actions.githubusercontent.com"
-  subject             = "repo:xxxxxxx/az-ailz-${var.APPID}-${var.RANDOM}:ref:refs/heads/main" # TODO: Make repo dynamic
-  parent_id           = azurerm_user_assigned_identity.ai-lz-umi.id
-  name                = "fc-az-ailz-${var.APPID}-${var.RANDOM}-main"
-  resource_group_name = azurerm_resource_group.rg-ai-core-infra.name
 }
+
+// --
+// TODO: Add custom role to register A record in platform private DNS zone
+// --
+
+// Create a federated identity credential for GitHub Actions
+
+resource "azuread_application_federated_identity_credential" "fc_ai-lz-app_github" {
+  application_id = azuread_application.ai-lz-app.id
+  display_name   = "fc-az-ailz-${var.APPID}-${var.RANDOM}-main"
+  audiences      = ["api://AzureADTokenExchange"]
+  issuer         = "https://token.actions.githubusercontent.com"
+  subject        = "repo:${var.GITHUB_ORG}/az-ailz-${var.APPID}-${var.RANDOM}:ref:refs/heads/main"
+}
+
+// Add variables to GitHub Actions
 
 resource "github_actions_variable" "clientid" {
-  repository       = github_repository.ailz-repo.name
-  variable_name    = "CLIENTID"
-  value            = azurerm_user_assigned_identity.ai-lz-umi.client_id
+  repository    = github_repository.ailz-repo.name
+  variable_name = "CLIENTID"
+  value         = azuread_application.ai-lz-app.client_id
 }
 
 resource "github_actions_variable" "appname" {
@@ -46,6 +90,10 @@ resource "github_actions_variable" "subscriptionid" {
   variable_name    = "SUBSCRIPTIONID"
   value            = var.ONBOARD_SUB_ID
 }
+
+// TODO Fix this:
+// Assign GitHub Team to the Repository
+// Strategy - sync github teams with security groups in azure ad
 
 /*
 Needs to be part of a github organization to do this
