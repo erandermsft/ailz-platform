@@ -6,8 +6,8 @@ param resourceIds resourceIdType
 
 var deployAppService = contosoToggles.?appService ?? false
 var deploySql = contosoToggles.?azureSql ?? false
-var deployJumpBox = contosoToggles.jumpBox ?? false
-var deploySearch = contosoToggles.searchService ?? false
+var deployJumpBox = contosoToggles.?jumpBox ?? false
+var deploySearch = contosoToggles.?searchService ?? false
 
 @description('Optional. Location')
 param location string = 'swedencentral'
@@ -129,7 +129,6 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       peNsg: true
       searchService: true
       storageAccount: true
-      virtualNetwork: false
       wafPolicy: false
     }
     resourceIds: union(resourceIds, {
