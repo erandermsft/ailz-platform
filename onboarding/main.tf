@@ -15,19 +15,11 @@ terraform {
   }
 }
 
-locals {
-  geo = {
-    swdn = {
-      location = "swedencentral"
-    }
-  }
-}
-
 // Create a GitHub Repository
 
 resource "github_repository" "ailz-repo" {
-  name        = "az-ailz-${var.APPID}-${var.RANDOM}"
-  description = "Repository for Azure AI Landing Zone - ${var.APPID} - ${var.RANDOM}"
+  name        = "az-ailz-${var.APPID}"
+  description = "Repository for Azure AI Landing Zone - ${var.APPID}"
   auto_init   = true
   visibility  = "private"
 }
@@ -37,7 +29,7 @@ resource "github_repository" "ailz-repo" {
 data "azuread_client_config" "current" {}
 
 resource "azuread_application" "ai-lz-app" {
-  display_name = "app-${var.APPID}-${var.RANDOM}"
+  display_name = "app-${var.APPID}"
   owners       = [data.azuread_client_config.current.object_id]
 }
 
@@ -67,10 +59,10 @@ resource "azurerm_role_assignment" "ai-lz-sp-role-assignment" {
 
 resource "azuread_application_federated_identity_credential" "fc_ai-lz-app_github" {
   application_id = azuread_application.ai-lz-app.id
-  display_name   = "fc-az-ailz-${var.APPID}-${var.RANDOM}-main"
+  display_name   = "fc-az-ailz-${var.APPID}-main"
   audiences      = ["api://AzureADTokenExchange"]
   issuer         = "https://token.actions.githubusercontent.com"
-  subject        = "repo:${var.GITHUB_ORG}/az-ailz-${var.APPID}-${var.RANDOM}:ref:refs/heads/main"
+  subject        = "repo:${var.GITHUB_ORG}/az-ailz-${var.APPID}:ref:refs/heads/main"
 }
 
 // Add variables to GitHub Actions
@@ -84,7 +76,7 @@ resource "github_actions_variable" "clientid" {
 resource "github_actions_variable" "appname" {
   repository       = github_repository.ailz-repo.name
   variable_name    = "NAME"
-  value            = "${var.APPID}-${var.RANDOM}"
+  value            = "${var.APPID}"
 }
 
 resource "github_actions_variable" "subscriptionid" {
@@ -101,8 +93,8 @@ resource "github_actions_variable" "subscriptionid" {
 Needs to be part of a github organization to do this
 
 resource "github_team" "ailz-team" {
-  name        = "ghtm-${var.APPID}-${var.RANDOM}-1"
-  description = "AI LZ Team - ${var.APPID} - ${var.RANDOM}"
+  name        = "ghtm-${var.APPID}-1"
+  description = "AI LZ Team - ${var.APPID}"
   privacy     = "closed"
 
   create_default_maintainer = true
