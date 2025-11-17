@@ -9,6 +9,34 @@ var deploySql = contosoToggles.?azureSql ?? false
 var deployJumpBox = contosoToggles.?jumpBox ?? false
 var deploySearch = contosoToggles.?searchService ?? false
 
+@description('Required. Resource group containing pre-created private DNS zones.')
+param dnsZoneResourceGroupName string
+
+@description('Optional. Subscription ID that holds the DNS zone resource group.')
+param dnsZoneSubscriptionId string = subscription().subscriptionId
+
+var dnsZoneNames = {
+  acr: 'privatelink.azurecr.io'
+  aiServices: 'privatelink.services.ai.azure.com'
+  appConfig: 'privatelink.azconfig.io'
+  openai: 'privatelink.openai.azure.com'
+  cognitiveservices: 'privatelink.cognitiveservices.azure.com'
+  blob: 'privatelink.blob.${environment().suffixes.storage}'
+  keyVault: 'privatelink.vaultcore.azure.net'
+  search: 'privatelink.search.windows.net'
+}
+
+var dnsZoneResourceIds = {
+  acr: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.acr)
+  aiServices: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.aiServices)
+  appConfig: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.appConfig)
+  openai: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.openai)
+  cognitiveservices: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.cognitiveservices)
+  blob: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.blob)
+  keyVault: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.keyVault)
+  search: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.search)
+}
+
 @description('Optional. Location')
 param location string = 'swedencentral'
 
@@ -61,12 +89,12 @@ module subnetprovisioning 'vnet-prerequisites.bicep' = {
 // Reference the base AILZ infrastructure with existing VNet
 // IMPORTANT: VNet and all subnets must already exist (deploy vnet-prerequisites.bicep first)
 //'../../../bicep/deploy/main.bicep'
+//'../../../bicep/infra/main.bicep' 
 module baseInfra '../../../bicep/deploy/main.bicep' = {
   name: 'ailz-base-infrastructure'
   params: {
     flagPlatformLandingZone: true
     deployToggles: {
-      
       virtualNetwork: false // Don't create new VNet - use existing
       acaEnvironmentNsg: false
       agentNsg: false
@@ -104,30 +132,57 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       existingVNetName: existingVNetNameForSubnets
       useDefaultSubnets: false
     }
+    storageAccountDefinition: {
+      name: 'strg-${baseName}'
+      allowBlobPublicAccess: false
+      defaultToOAuthAuthentication: true
+      isLocalUserEnabled: false
+      publicNetworkAccess: 'Disabled'
+    }
+    enableTelemetry: false
+    privateDnsZonesDefinition: {
+      acrZoneId: dnsZoneResourceIds.acr
+      aiServicesZoneId: dnsZoneResourceIds.aiServices
+      appConfigZoneId: dnsZoneResourceIds.appConfig
+      openaiZoneId: dnsZoneResourceIds.openai
+      cognitiveservicesZoneId: dnsZoneResourceIds.cognitiveservices
+      blobZoneId: dnsZoneResourceIds.blob
+      keyVaultZoneId: dnsZoneResourceIds.keyVault
+      searchZoneId: dnsZoneResourceIds.search
+      createNetworkLinks: false
+    }
+    appConfigurationDefinition: {
+      name: 'appcfg-${baseName}'
+      disableLocalAuth: true
+      publicNetworkAccess: 'Disabled'
+    }
+    keyVaultDefinition: {
+      name: 'kv-${baseName}'
+      publicNetworkAccess: 'Disabled'
+    }
     aiFoundryDefinition: {
       aiFoundryConfiguration: {
         disableLocalAuth: true
-        networking:{
-          aiServicesPrivateDnsZoneResourceId:
-          cognitiveServicesPrivateDnsZoneResourceId:
-          openAiPrivateDnsZoneResourceId:
-          agentServiceSubnetResourceId:
-        
-        }
+        // networking:{
+        //   aiServicesPrivateDnsZoneResourceId:
+        //   cognitiveServicesPrivateDnsZoneResourceId:
+        //   openAiPrivateDnsZoneResourceId:
+        // }
       }
     }
-    aiSearchDefinition: deploySearch ? {
-      name: 'search-${baseName}'
-      sku: 'standard'
-      disableLocalAuth:true
-      authOptions: {}
-      managedIdentities:{
-        systemAssigned: true
-      }
-      publicNetworkAccess: 'Disabled'
-
-      replicaCount: 1
-    } : {}
+    aiSearchDefinition: deploySearch
+      ? {
+          name: 'search-${baseName}'
+          sku: 'standard'
+          disableLocalAuth: true
+          authOptions: {}
+          managedIdentities: {
+            systemAssigned: true
+          }
+          publicNetworkAccess: 'Disabled'
+          replicaCount: 1
+        }
+      : {}
 
     // AILZ will use existing subnets (no subnet creation)
     // Subnets must already exist in the VNet:
@@ -175,28 +230,28 @@ module sqlServer 'br/public:avm/res/sql/server:0.9.0' = if (deploySql) {
 }
 
 // SQL Private Endpoint
-module sqlPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.0' = if (deploySql) {
-  name: 'pe-sql-${baseName}'
-  params: {
-    name: 'pe-sql-${baseName}'
-    location: location
-    // Use AILZ private endpoint subnet (created by baseInfra with default subnets)
-    subnetResourceId: '${baseInfra.outputs.virtualNetworkResourceId}/subnets/pe-subnet'
+// module sqlPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.0' = if (deploySql) {
+//   name: 'pe-sql-${baseName}'
+//   params: {
+//     name: 'pe-sql-${baseName}'
+//     location: location
+//     // Use AILZ private endpoint subnet (created by baseInfra with default subnets)
+//     subnetResourceId: '${baseInfra.outputs.virtualNetworkResourceId}/subnets/pe-subnet'
 
-    privateLinkServiceConnections: [
-      {
-        name: 'sql-connection'
-        properties: {
-          privateLinkServiceId: sqlServer.outputs.resourceId
-          groupIds: ['sqlServer']
-        }
-      }
-    ]
+//     privateLinkServiceConnections: [
+//       {
+//         name: 'sql-connection'
+//         properties: {
+//           privateLinkServiceId: sqlServer.outputs.resourceId
+//           groupIds: ['sqlServer']
+//         }
+//       }
+//     ]
 
-    // TODO: Integrate with AILZ-managed Private DNS Zone if available
-    customNetworkInterfaceName: 'nic-pe-sql-${baseName}'
-  }
-}
+//     // TODO: Integrate with AILZ-managed Private DNS Zone if available
+//     customNetworkInterfaceName: 'nic-pe-sql-${baseName}'
+//   }
+// }
 
 // ===================================
 // CONTOSO RESOURCES - APP SERVICE
@@ -227,7 +282,7 @@ module website 'br/public:avm/res/web/site:0.19.4' = if (deployAppService) {
     // Required parameters
     kind: 'app'
     name: 'app-${baseName}'
-    serverFarmResourceId: deployAppService ? serverfarm.outputs.resourceId : ''
+    serverFarmResourceId: deployAppService ? resourceId('Microsoft.Web/serverfarms', 'asp-${baseName}') : ''
 
     // Non-required parameters
     location: location
@@ -279,34 +334,31 @@ module website 'br/public:avm/res/web/site:0.19.4' = if (deployAppService) {
       systemAssigned: true
     }
   }
-  dependsOn: [
-    baseInfra // Ensure subnet exists
-    sqlPrivateEndpoint // Ensure SQL is accessible before app starts
-  ]
+  dependsOn: deployAppService ? [serverfarm] : []
 }
 
 // App Service Private Endpoint (for inbound HTTPS traffic)
-module appServicePrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.0' = if (deployAppService) {
-  name: 'pe-app-${baseName}'
-  params: {
-    name: 'pe-app-${baseName}'
-    location: location
-    subnetResourceId: '${baseInfra.outputs.virtualNetworkResourceId}/subnets/pe-subnet'
+// module appServicePrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.0' = if (deployAppService) {
+//   name: 'pe-app-${baseName}'
+//   params: {
+//     name: 'pe-app-${baseName}'
+//     location: location
+//     subnetResourceId: '${baseInfra.outputs.virtualNetworkResourceId}/subnets/pe-subnet'
 
-    privateLinkServiceConnections: [
-      {
-        name: 'appservice-connection'
-        properties: {
-          privateLinkServiceId: deployAppService ? website.outputs.resourceId : ''
-          groupIds: ['sites']
-        }
-      }
-    ]
+//     privateLinkServiceConnections: [
+//       {
+//         name: 'appservice-connection'
+//         properties: {
+//           privateLinkServiceId: deployAppService ? website.outputs.resourceId : ''
+//           groupIds: ['sites']
+//         }
+//       }
+//     ]
 
-    // TODO: Integrate with AILZ-managed Private DNS Zone if available
-    customNetworkInterfaceName: 'nic-pe-app-${baseName}'
-  }
-}
+//     // TODO: Integrate with AILZ-managed Private DNS Zone if available
+//     customNetworkInterfaceName: 'nic-pe-app-${baseName}'
+//   }
+// }
 
 // ===================================
 // OUTPUTS
@@ -316,7 +368,7 @@ module appServicePrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9
 output virtualNetworkResourceId string = baseInfra.outputs.virtualNetworkResourceId
 
 @description('SQL Server resource ID')
-output sqlServerResourceId string = deploySql ? sqlServer.outputs.resourceId : ''
+output sqlServerResourceId string = deploySql ? resourceId('Microsoft.Sql/servers', 'sql-${baseName}') : ''
 
 @description('App Service resource ID')
-output appServiceResourceId string = deployAppService ? website.outputs.resourceId : ''
+output appServiceResourceId string = deployAppService ? resourceId('Microsoft.Web/sites', 'app-${baseName}') : ''
