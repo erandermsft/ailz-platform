@@ -153,7 +153,7 @@ echo ""
 print_step "3" "Updating bicep references..."
 
 # Update path references in main.bicep to point to upstream deploy (using relative paths)
-for bicep_file in "$platform_deploy_dir/main.bicep" "$platform_deploy_dir/main-byo-vnet.bicep"; do
+for bicep_file in "$platform_deploy_dir/main.bicep" "$platform_deploy_dir/main-byo-vnet.bicep" "$platform_deploy_dir/vnet-prerequisites.bicep"; do
     if [ -f "$bicep_file" ]; then
         # Replace platform infra paths with deploy paths (keep relative)
         # These paths work because platform/deploy/ -> ../../bicep/deploy/
