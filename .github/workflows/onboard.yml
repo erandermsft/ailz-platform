@@ -1,0 +1,119 @@
+name: Onboard AI Landing Zone
+
+on:
+  workflow_dispatch:
+    inputs:
+      subscription_id:
+        description: "Azure Subscription ID where AI Landing Zone will be onboarded"
+        required: true
+        type: string
+      appid:
+        description: "Application ID. Identifier of the application"
+        required: true
+        type: string
+        default: "12345"
+
+permissions:
+  id-token: write
+  contents: write
+
+env:
+    AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    TF_VAR_ONBOARD_SUB_ID: ${{ github.event.inputs.subscription_id }}
+    TF_VAR_APPID: ${{ github.event.inputs.appid }}
+    ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+    ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+    ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    ARM_USE_OIDC: true
+
+
+jobs:
+    onboard-job:
+        name: Onboard AI Landing Zone
+        runs-on: ubuntu-latest
+        steps:
+          - name: Checkout code
+            uses: actions/checkout@v4
+
+          - name: Set up Terraform
+            uses: hashicorp/setup-terraform@v3
+
+          - name: Azure Login
+            uses: azure/login@v2
+            with:
+              client-id: ${{ secrets.AZURE_CLIENT_ID }}
+              tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+              subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+          - name: Terraform Init
+            working-directory: onboarding
+            run: terraform init
+
+          - name: Terraform Validate
+            working-directory: onboarding
+            run: terraform validate
+
+          - name: Terraform Apply
+            working-directory: onboarding
+            run: terraform apply -auto-approve
+
+          - name: Capture Terraform Outputs
+            id: terraform_outputs
+            working-directory: onboarding
+            run: |
+              terraform output -json > tf-output.json
+              repo_full_name=$(jq -r '.repo_full_name.value // empty' tf-output.json)
+              repo_default_branch=$(jq -r '.repo_default_branch.value // "main"' tf-output.json)
+              echo "repo_full_name=${repo_full_name}" >> $GITHUB_OUTPUT
+              echo "repo_default_branch=${repo_default_branch}" >> $GITHUB_OUTPUT
+
+          - name: Checkout provisioned repository
+            if: ${{ steps.terraform_outputs.outputs.repo_full_name != '' }}
+            uses: actions/checkout@v4
+            with:
+              repository: ${{ steps.terraform_outputs.outputs.repo_full_name }}
+              ref: ${{ steps.terraform_outputs.outputs.repo_default_branch }}
+              path: new-repo
+              token: ${{ github.token }}
+
+          - name: Sync workload payload
+            if: ${{ steps.terraform_outputs.outputs.repo_full_name != '' }}
+            env:
+              REPO_DEFAULT_BRANCH: ${{ steps.terraform_outputs.outputs.repo_default_branch }}
+            run: |
+              workflow_source_path="workload_workflows/deploy_infra.yml"
+              workflow_target_dir=".github/workflows"
+              workflow_target_path="${workflow_target_dir}/deploy_infra.yml"
+              if [ ! -f "${workflow_source_path}" ]; then
+                echo "Expected workflow file '${workflow_source_path}' not found."
+                exit 1
+              fi
+              mkdir -p "new-repo/${workflow_target_dir}"
+              cp "${workflow_source_path}" "new-repo/${workflow_target_path}"
+              cd new-repo
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+              git add "${workflow_target_path}"
+              if git diff --cached --quiet; then
+                echo "No workflow changes to publish."
+              else
+                git commit -m "Seed deploy workflow from landing zone"
+                git push origin HEAD:${REPO_DEFAULT_BRANCH}
+              fi
+              cd ..
+              payload_source_dir="workload"
+              payload_target_dir="infra"
+              rm -rf "new-repo/${payload_target_dir}"
+              mkdir -p "new-repo/${payload_target_dir}"
+              cp -a "${payload_source_dir}/." "new-repo/${payload_target_dir}/"
+              cd new-repo
+              git add "${payload_target_dir}"
+              if git diff --cached --quiet; then
+                echo "No workload changes to publish."
+              else
+                git commit -m "Seed workload payload from landing zone"
+                git push origin HEAD:${REPO_DEFAULT_BRANCH}
+              fi
+              cd ..
+
+    

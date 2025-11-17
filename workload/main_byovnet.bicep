@@ -7,7 +7,7 @@ targetScope = 'subscription'
 param location string = 'swedencentral'
 
 @description('Required. Resource group name to create for the BYO deployment.')
-param resourceGroupName string
+param resourceGroupName string = 'rg-ailz-contoso-byovnet'
 
 @description('Optional. VNet name')
 param vnetName string = 'vnet-ailz-contoso'
