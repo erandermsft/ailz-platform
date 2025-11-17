@@ -87,9 +87,11 @@ resource "github_actions_variable" "subscriptionid" {
   value            = var.ONBOARD_SUB_ID
 }
 
+//
 // TODO Fix this:
-// Assign GitHub Team to the Repository
-// Strategy - sync github teams with security groups in azure ad
+//
+
+// Assign permissions to a GitHub repo
 
 /*
 resource "github_team" "ailz-team" {
