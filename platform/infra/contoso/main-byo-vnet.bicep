@@ -26,93 +26,50 @@ var existingVNetResourceId = contains(existingVNetName, '/')
   : resourceId('Microsoft.Network/virtualNetworks', existingVNetName)
 
 var existingVNetIdSegments = split(existingVNetResourceId, '/')
-var existingVNetSubscriptionId = length(existingVNetIdSegments) >= 3 ? existingVNetIdSegments[2] : subscription().subscriptionId
-var existingVNetResourceGroupName = length(existingVNetIdSegments) >= 5 ? existingVNetIdSegments[4] : resourceGroup().name
+var existingVNetSubscriptionId = length(existingVNetIdSegments) >= 3
+  ? existingVNetIdSegments[2]
+  : subscription().subscriptionId
+var existingVNetResourceGroupName = length(existingVNetIdSegments) >= 5
+  ? existingVNetIdSegments[4]
+  : resourceGroup().name
 var existingVNetNameOnly = length(existingVNetIdSegments) > 0 ? last(existingVNetIdSegments) : existingVNetName
 var existingVNetNameForSubnets = existingVNetSubscriptionId == subscription().subscriptionId && existingVNetResourceGroupName == resourceGroup().name
   ? existingVNetNameOnly
   : existingVNetResourceId
 
-var includeSqlSubnet = deploySql
-var includeAppServiceSubnet = deployAppService
-
 var includeJumpBoxAndBastionSubnet = deployJumpBox
-
-//'192.168.0.0/24'
-var baseAddressPrefix = vnet.properties.addressSpace.addressPrefixes[0]
-
-var privateEndpointSubnetCidr = cidrSubnet(baseAddressPrefix, 27, 0)
-var appServiceSubnetCidr = cidrSubnet(baseAddressPrefix, 27, 1)
-var sqlSubnetCidr = cidrSubnet(baseAddressPrefix, 27, 2)
-var jumpboxSubnetCidr = cidrSubnet(baseAddressPrefix, 27, 3)
-var azureBastionSubnetCidr = cidrSubnet(baseAddressPrefix, 27, 4)
-
-var byoDefaultSubnets = concat(
-  [],
-  includeJumpBoxAndBastionSubnet
-    ? [
-        {
-          name: 'jumpbox-subnet'
-          addressPrefix: jumpboxSubnetCidr
-        }
-        {
-          name: 'AzureBastionSubnet'
-          addressPrefix: azureBastionSubnetCidr
-        }
-      ]
-    : [],
-  includeAppServiceSubnet
-    ? [
-        {
-          name: 'appservice-subnet'
-          addressPrefix: appServiceSubnetCidr
-          privateEndpointNetworkPolicies: 'Disabled'
-          privateLinkServiceNetworkPolicies: 'Enabled'
-          delegation: 'Microsoft.Web/serverFarms'
-        }
-      ]
-    : [],
-  [
-    {
-      name: 'pe-subnet'
-      addressPrefix: privateEndpointSubnetCidr
-      privateEndpointNetworkPolicies: 'Disabled'
-      serviceEndpoints: [
-        {
-          service: 'Microsoft.AzureCosmosDB'
-        }
-      ]
-    }
-  ],
-  includeSqlSubnet
-    ? [
-        {
-          name: 'sql-subnet'
-          addressPrefix: sqlSubnetCidr
-          privateEndpointNetworkPolicies: 'Disabled'
-          privateLinkServiceNetworkPolicies: 'Enabled'
-        }
-      ]
-    : []
-)
 
 // ===================================
 // BYO VNET CONFIGURATION
 // ===================================
 
-resource vnet 'Microsoft.Network/virtualNetworks@2024-10-01' existing = {
-  name: existingVNetNameOnly
-  scope: resourceGroup(existingVNetSubscriptionId, existingVNetResourceGroupName)
+// resource vnet 'Microsoft.Network/virtualNetworks@2024-10-01' existing = {
+//   name: existingVNetNameOnly
+//   scope: resourceGroup(existingVNetSubscriptionId, existingVNetResourceGroupName)
+// }
+module subnetprovisioning 'vnet-prerequisites.bicep' = {
+  params: {
+    baseName: baseName
+    existingVNetNameOnly: existingVNetNameOnly
+    existingVNetResourceGroupName: existingVNetResourceGroupName
+    includeJumpBoxAndBastionSubnet: includeJumpBoxAndBastionSubnet
+    deploySql: deploySql
+    deployAppService: deployAppService
+  }
 }
+
 // Reference the base AILZ infrastructure with existing VNet
 // IMPORTANT: VNet and all subnets must already exist (deploy vnet-prerequisites.bicep first)
+//'../../../bicep/deploy/main.bicep'
 module baseInfra '../../../bicep/deploy/main.bicep' = {
   name: 'ailz-base-infrastructure'
   params: {
+    flagPlatformLandingZone: true
     deployToggles: {
+      
       virtualNetwork: false // Don't create new VNet - use existing
       acaEnvironmentNsg: false
-      agentNsg: true
+      agentNsg: false
       apiManagement: false
       apiManagementNsg: false
       appConfig: true
@@ -120,8 +77,8 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       applicationGateway: false
       applicationGatewayNsg: false
       applicationGatewayPublicIp: false
-      bastionHost: true
-      bastionNsg: true
+      bastionHost: deployJumpBox
+      bastionNsg: deployJumpBox
       buildVm: false
       containerApps: false
       containerEnv: false
@@ -129,12 +86,12 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       cosmosDb: false
       devopsBuildAgentsNsg: false
       firewall: false
-      groundingWithBingSearch: true
-      jumpVm: true
-      jumpboxNsg: true
+      groundingWithBingSearch: false
+      jumpVm: deployJumpBox
+      jumpboxNsg: deployJumpBox
       keyVault: true
       logAnalytics: true
-      peNsg: true
+      peNsg: false
       searchService: true
       storageAccount: true
       wafPolicy: false
@@ -146,11 +103,29 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
     existingVNetSubnetsDefinition: {
       existingVNetName: existingVNetNameForSubnets
       useDefaultSubnets: false
-      subnets: byoDefaultSubnets
+    }
+    aiFoundryDefinition: {
+      aiFoundryConfiguration: {
+        disableLocalAuth: true
+        networking:{
+          aiServicesPrivateDnsZoneResourceId:
+          cognitiveServicesPrivateDnsZoneResourceId:
+          openAiPrivateDnsZoneResourceId:
+          agentServiceSubnetResourceId:
+        
+        }
+      }
     }
     aiSearchDefinition: deploySearch ? {
       name: 'search-${baseName}'
       sku: 'standard'
+      disableLocalAuth:true
+      authOptions: {}
+      managedIdentities:{
+        systemAssigned: true
+      }
+      publicNetworkAccess: 'Disabled'
+
       replicaCount: 1
     } : {}
 

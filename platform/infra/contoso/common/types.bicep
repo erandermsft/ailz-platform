@@ -1,4 +1,4 @@
-import { deployTogglesType, resourceIdsType, existingVNetSubnetsDefinitionType } from '../../../../bicep/infra/common/types.bicep'
+import { deployTogglesType, resourceIdsType, existingVNetSubnetsDefinitionType, kSAISearchDefinitionType } from '../../../../bicep/infra/common/types.bicep'
 
 // Re-export the base type so consumers can use it
 @export()
@@ -8,6 +8,9 @@ type resourceIdType = resourceIdsType
 
 @export()
 type baseExistingVNetSubnetsDefinitionType = existingVNetSubnetsDefinitionType
+
+@export()
+type basekSAISearchDefinitionType = kSAISearchDefinitionType
 
 // Define only Contoso-specific extensions
 @export()
