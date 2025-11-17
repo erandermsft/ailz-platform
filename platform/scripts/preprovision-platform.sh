@@ -134,7 +134,8 @@ mkdir -p "$platform_deploy_dir"
 # Copy main.bicep and main-byo-vnet.bicep
 cp "$platform_infra_dir/main.bicep" "$platform_deploy_dir/"
 cp "$platform_infra_dir/main-byo-vnet.bicep" "$platform_deploy_dir/"
-print_gray "Copied main.bicep and main-byo-vnet.bicep"
+cp "$platform_infra_dir/vnet-prerequisites.bicep" "$platform_deploy_dir/"
+print_gray "Copied main.bicep, main-byo-vnet.bicep and vnet-prerequisites.bicep"
 
 # Copy common directory (types.bicep)
 if [ -d "$platform_infra_dir/common" ]; then
