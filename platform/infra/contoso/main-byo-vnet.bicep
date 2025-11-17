@@ -24,6 +24,7 @@ var dnsZoneNames = {
   blob: 'privatelink.blob.${environment().suffixes.storage}'
   keyVault: 'privatelink.vaultcore.azure.net'
   search: 'privatelink.search.windows.net'
+  cosmos: 'privatelink.documents.azure.com'
 }
 
 var dnsZoneResourceIds = {
@@ -35,6 +36,7 @@ var dnsZoneResourceIds = {
   blob: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.blob)
   keyVault: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.keyVault)
   search: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.search)
+  cosmos: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.cosmos)
 }
 
 @description('Optional. Location')
@@ -90,7 +92,7 @@ module subnetprovisioning 'vnet-prerequisites.bicep' = {
 // IMPORTANT: VNet and all subnets must already exist (deploy vnet-prerequisites.bicep first)
 //'../../../bicep/deploy/main.bicep'
 //'../../../bicep/infra/main.bicep' 
-module baseInfra '../../../bicep/deploy/main.bicep' = {
+module baseInfra '../../../bicep/infra/main.bicep' = {
   name: 'ailz-base-infrastructure'
   params: {
     flagPlatformLandingZone: true
@@ -142,6 +144,7 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
     enableTelemetry: false
     privateDnsZonesDefinition: {
       acrZoneId: dnsZoneResourceIds.acr
+      cosmosSqlZoneId: dnsZoneResourceIds.cosmos
       aiServicesZoneId: dnsZoneResourceIds.aiServices
       appConfigZoneId: dnsZoneResourceIds.appConfig
       openaiZoneId: dnsZoneResourceIds.openai
@@ -149,6 +152,7 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       blobZoneId: dnsZoneResourceIds.blob
       keyVaultZoneId: dnsZoneResourceIds.keyVault
       searchZoneId: dnsZoneResourceIds.search
+    
       createNetworkLinks: false
     }
     appConfigurationDefinition: {
