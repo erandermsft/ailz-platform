@@ -81,9 +81,9 @@ resource "github_actions_variable" "appname" {
   value            = "${var.APPID}"
 }
 
-resource "github_actions_variable" "subscriptionid" {
+resource "github_actions_variable" "azuresubscriptionid" {
   repository       = github_repository.ailz-repo.name
-  variable_name    = "SUBSCRIPTIONID"
+  variable_name    = "AZURE_SUBSCRIPTION_ID"
   value            = var.ONBOARD_SUB_ID
 }
 

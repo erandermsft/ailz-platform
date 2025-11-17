@@ -12,7 +12,7 @@ variable "APPID" {
 variable "GITHUB_ORG" {
   description = "GitHub organization name"
   type        = string
-  default = "value"
+  default = "value" // Enter you org here!
 }
 
 

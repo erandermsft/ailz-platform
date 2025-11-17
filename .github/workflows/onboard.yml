@@ -12,16 +12,6 @@ on:
         required: true
         type: string
         default: "12345"
-      workload_source_dir:
-        description: "Source folder in this repository copied into the provisioned repo"
-        required: false
-        type: string
-        default: "workload"
-      workload_target_dir:
-        description: "Target folder in the provisioned repository that receives the workload payload"
-        required: false
-        type: string
-        default: "infra"
 
 permissions:
   id-token: write
@@ -77,20 +67,6 @@ jobs:
               echo "repo_full_name=${repo_full_name}" >> $GITHUB_OUTPUT
               echo "repo_default_branch=${repo_default_branch}" >> $GITHUB_OUTPUT
 
-          - name: Resolve workload directories
-            id: resolved_workload_dirs
-            run: |
-              source_dir="${{ github.event.inputs.workload_source_dir }}"
-              input_dir="${{ github.event.inputs.workload_target_dir }}"
-              if [ -z "$source_dir" ]; then
-                source_dir="workload"
-              fi
-              if [ -z "$input_dir" ]; then
-                input_dir="infra"
-              fi
-              echo "source_dir=$source_dir" >> $GITHUB_OUTPUT
-              echo "target_dir=$input_dir" >> $GITHUB_OUTPUT
-
           - name: Checkout provisioned repository
             if: ${{ steps.terraform_outputs.outputs.repo_full_name != '' }}
             uses: actions/checkout@v4
@@ -104,21 +80,40 @@ jobs:
             if: ${{ steps.terraform_outputs.outputs.repo_full_name != '' }}
             env:
               REPO_DEFAULT_BRANCH: ${{ steps.terraform_outputs.outputs.repo_default_branch }}
-              WORKLOAD_SOURCE_DIR: ${{ steps.resolved_workload_dirs.outputs.source_dir }}
-              WORKLOAD_TARGET_DIR: ${{ steps.resolved_workload_dirs.outputs.target_dir }}
             run: |
-              rm -rf "new-repo/${WORKLOAD_TARGET_DIR}"
-              mkdir -p "new-repo/${WORKLOAD_TARGET_DIR}"
-              cp -a "${WORKLOAD_SOURCE_DIR}/." "new-repo/${WORKLOAD_TARGET_DIR}/"
+              workflow_source_path="workload_workflows/deploy_infra.yml"
+              workflow_target_dir=".github/workflows"
+              workflow_target_path="${workflow_target_dir}/deploy_infra.yml"
+              if [ ! -f "${workflow_source_path}" ]; then
+                echo "Expected workflow file '${workflow_source_path}' not found."
+                exit 1
+              fi
+              mkdir -p "new-repo/${workflow_target_dir}"
+              cp "${workflow_source_path}" "new-repo/${workflow_target_path}"
               cd new-repo
               git config user.name "github-actions[bot]"
               git config user.email "github-actions[bot]@users.noreply.github.com"
-              git add "${WORKLOAD_TARGET_DIR}"
+              git add "${workflow_target_path}"
+              if git diff --cached --quiet; then
+                echo "No workflow changes to publish."
+              else
+                git commit -m "Seed deploy workflow from landing zone"
+                git push origin HEAD:${REPO_DEFAULT_BRANCH}
+              fi
+              cd ..
+              payload_source_dir="workload"
+              payload_target_dir="infra"
+              rm -rf "new-repo/${payload_target_dir}"
+              mkdir -p "new-repo/${payload_target_dir}"
+              cp -a "${payload_source_dir}/." "new-repo/${payload_target_dir}/"
+              cd new-repo
+              git add "${payload_target_dir}"
               if git diff --cached --quiet; then
                 echo "No workload changes to publish."
               else
-                git commit -m "Seed workload folder from landing zone"
+                git commit -m "Seed workload payload from landing zone"
                 git push origin HEAD:${REPO_DEFAULT_BRANCH}
               fi
+              cd ..
 
     

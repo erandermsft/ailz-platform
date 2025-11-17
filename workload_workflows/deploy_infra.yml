@@ -1,0 +1,44 @@
+name: Deploy Default AI Landing Zone Infrastructure
+
+on:
+  push:
+    paths:
+      - 'infra/**'
+  workflow_dispatch:
+    inputs:
+      tags-json:
+        description: Optional JSON object string to override the template tags parameter
+        required: false
+        default: "{}"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      BICEP_FILE: infra/main_byovnet.bicep
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy BYO VNet module
+        uses: azure/arm-deploy@v1
+        with:
+          scope: subscription
+          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          region: swedencentral
+          deploymentName: byo-vnet-${{ github.run_id }}
+          template: ${{ env.BICEP_FILE }}
+          parameters: |
+            tags=${{ inputs.tags-json }}
+
+      - name: Azure Logout
+        if: always()
+        run: az logout
