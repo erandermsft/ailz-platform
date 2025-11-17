@@ -135,7 +135,7 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       useDefaultSubnets: false
     }
     storageAccountDefinition: {
-      name: 'strg-${baseName}'
+      name: 'st${baseName}'
       allowBlobPublicAccess: false
       defaultToOAuthAuthentication: true
       isLocalUserEnabled: false
