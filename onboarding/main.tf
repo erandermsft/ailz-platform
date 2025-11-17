@@ -52,8 +52,9 @@ resource "azurerm_role_assignment" "ai-lz-sp-role-assignment" {
 }
 
 // --
-// TODO: Add custom role to register A record in platform private DNS zone
+// TODO: Add RBAC assignments as needed
 // --
+
 
 // Create a federated identity credential for GitHub Actions
 
@@ -66,6 +67,7 @@ resource "azuread_application_federated_identity_credential" "fc_ai-lz-app_githu
 }
 
 // Add variables to GitHub Actions
+//TODO: Add more variables as needed
 
 resource "github_actions_variable" "clientid" {
   repository    = github_repository.ailz-repo.name
@@ -90,8 +92,6 @@ resource "github_actions_variable" "subscriptionid" {
 // Strategy - sync github teams with security groups in azure ad
 
 /*
-Needs to be part of a github organization to do this
-
 resource "github_team" "ailz-team" {
   name        = "ghtm-${var.APPID}-1"
   description = "AI LZ Team - ${var.APPID}"
