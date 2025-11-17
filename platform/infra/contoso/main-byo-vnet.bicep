@@ -179,7 +179,7 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
           name: 'search-${baseName}'
           sku: 'standard'
           disableLocalAuth: true
-          authOptions: {}
+          authOptions: null
           managedIdentities: {
             systemAssigned: true
           }
