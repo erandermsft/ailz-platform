@@ -138,7 +138,7 @@ module subnetprovisioning 'vnet-prerequisites.bicep' = {
 
 var peSubnetId = '${existingVNetResourceId}/subnets/pe-subnet'
 
-module baseInfra '../../../bicep/deploy/main.bicep' = {
+module baseInfra '../../../bicep/infra/main.bicep' = {
   name: 'ailz-base-infrastructure'
   params: {
     flagPlatformLandingZone: true
@@ -187,6 +187,18 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       defaultToOAuthAuthentication: true
       isLocalUserEnabled: false
       publicNetworkAccess: 'Disabled'
+      privateEndpoints: [
+        {
+          subnetResourceId: peSubnetId
+          privateDnsZoneGroup: {
+            privateDnsZoneGroupConfigs: [
+              {
+                privateDnsZoneResourceId: dnsZoneResourceIds.blob
+              }
+            ]
+          }
+        }
+      ]
     }
     enableTelemetry: false
     privateDnsZonesDefinition: {
@@ -202,7 +214,7 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
 
       createNetworkLinks: false
     }
-    
+
     containerRegistryDefinition: {
       name: 'cr${baseName}'
       publicNetworkAccess: 'Disabled'
@@ -253,18 +265,17 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
         }
       ]
     }
-  
     aiFoundryDefinition: {
-      privateEndpointSubnetResourceId: peSubnetId
+      // privateEndpointSubnetResourceId: peSubnetId
+
       aiFoundryConfiguration: {
         disableLocalAuth: true
 
-        networking: {
-          aiServicesPrivateDnsZoneResourceId: dnsZoneResourceIds.aiServices
-          cognitiveServicesPrivateDnsZoneResourceId: dnsZoneResourceIds.cognitiveservices
-          openAiPrivateDnsZoneResourceId: dnsZoneResourceIds.openai
-          
-        }
+        // networking: {
+        //   aiServicesPrivateDnsZoneResourceId: dnsZoneResourceIds.aiServices
+        //   cognitiveServicesPrivateDnsZoneResourceId: dnsZoneResourceIds.cognitiveservices
+        //   openAiPrivateDnsZoneResourceId: dnsZoneResourceIds.openai
+        // }
       }
     }
     aiSearchDefinition: deploySearch
