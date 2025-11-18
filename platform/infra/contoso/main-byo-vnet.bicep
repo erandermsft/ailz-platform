@@ -135,7 +135,7 @@ module subnetprovisioning 'vnet-prerequisites.bicep' = {
 // IMPORTANT: VNet and all subnets must already exist (deploy vnet-prerequisites.bicep first)
 //'../../../bicep/deploy/main.bicep'
 //'../../../bicep/infra/main.bicep' 
-module baseInfra '../../../bicep/infra/main.bicep' = {
+module baseInfra '../../../bicep/deploy/main.bicep' = {
   name: 'ailz-base-infrastructure'
   params: {
     flagPlatformLandingZone: true
@@ -199,6 +199,24 @@ module baseInfra '../../../bicep/infra/main.bicep' = {
 
       createNetworkLinks: false
     }
+    
+    containerRegistryDefinition: {
+      name: 'cr${baseName}'
+      publicNetworkAccess: 'Disabled'
+      privateEndpoints: [
+        {
+          subnetResourceId: subnetprovisioning.outputs.peNsgResourceId
+          privateDnsZoneGroup: {
+            privateDnsZoneGroupConfigs: [
+              {
+                privateDnsZoneResourceId: dnsZoneResourceIds.acr
+              }
+            ]
+          }
+        }
+      ]
+    }
+
     appConfigurationDefinition: {
       name: 'appcfg-${baseName}'
       disableLocalAuth: true
