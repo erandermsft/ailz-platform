@@ -286,7 +286,7 @@ module agentNsgWrapper 'wrappers/avm.res.network.network-security-group.bicep' =
 
 var agentNsgResourceId = resourceIds.?agentNsgResourceId ?? (varDeployAgentNsg
   ? agentNsgWrapper!.outputs.resourceId
-  : null)
+  : '')
 
 var varDeployPeNsg = deployToggles.peNsg && empty(resourceIds.?peNsgResourceId)
 
@@ -305,7 +305,7 @@ module peNsgWrapper 'wrappers/avm.res.network.network-security-group.bicep' = if
   }
 }
 
-var peNsgResourceId = resourceIds.?peNsgResourceId ?? (varDeployPeNsg ? peNsgWrapper!.outputs.resourceId : null)
+var peNsgResourceId = resourceIds.?peNsgResourceId ?? (varDeployPeNsg ? peNsgWrapper!.outputs.resourceId : '')
 
 var varDeployApplicationGatewayNsg = deployToggles.applicationGatewayNsg && empty(resourceIds.?applicationGatewayNsgResourceId)
 
