@@ -259,12 +259,12 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       aiFoundryConfiguration: {
         disableLocalAuth: true
 
-        // networking: {
-        //   aiServicesPrivateDnsZoneResourceId: dnsZoneResourceIds.aiServices
-        //   cognitiveServicesPrivateDnsZoneResourceId: dnsZoneResourceIds.cognitiveservices
-        //   openAiPrivateDnsZoneResourceId: dnsZoneResourceIds.openai
+        networking: {
+          aiServicesPrivateDnsZoneResourceId: dnsZoneResourceIds.aiServices
+          cognitiveServicesPrivateDnsZoneResourceId: dnsZoneResourceIds.cognitiveservices
+          openAiPrivateDnsZoneResourceId: dnsZoneResourceIds.openai
           
-        // }
+        }
       }
     }
     aiSearchDefinition: deploySearch
