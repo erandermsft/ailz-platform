@@ -138,7 +138,7 @@ module subnetprovisioning 'vnet-prerequisites.bicep' = {
 
 var peSubnetId = '${existingVNetResourceId}/subnets/pe-subnet'
 
-module baseInfra '../../../bicep/infra/main.bicep' = {
+module baseInfra '../../../bicep/deploy/main.bicep' = {
   name: 'ailz-base-infrastructure'
   params: {
     flagPlatformLandingZone: true
