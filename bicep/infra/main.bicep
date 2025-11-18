@@ -2438,7 +2438,7 @@ module aiFoundry 'wrappers/avm.ptn.ai-ml.ai-foundry.bicep' = {
           disableLocalAuth: false
           location: location
 
-          networking: varDeployPdnsAndPe ? varAfNetworkingOverride : {}
+          networking: varDeployPdnsAndPe ? varAfNetworkingOverride : null
 
           project: varAfProjectEnabled
             ? {

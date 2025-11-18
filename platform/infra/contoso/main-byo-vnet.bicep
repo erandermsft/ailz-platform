@@ -189,8 +189,11 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       privateEndpoints: [
         {
           subnetResourceId: peSubnetId
+          service: 'blob'
           privateDnsZoneGroup: {
+
             privateDnsZoneGroupConfigs: [
+              
               {
                 privateDnsZoneResourceId: dnsZoneResourceIds.blob
               }
@@ -361,7 +364,7 @@ module sqlPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.0' = i
       {
         name: 'sql-connection'
         properties: {
-          privateLinkServiceId: sqlServer.outputs.resourceId
+          privateLinkServiceId: sqlServer!.outputs.resourceId
           groupIds: ['sqlServer']
         }
       }
@@ -468,7 +471,7 @@ module appServicePrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9
       {
         name: 'appservice-connection'
         properties: {
-          privateLinkServiceId: deployAppService ? website.outputs.resourceId : ''
+          privateLinkServiceId: deployAppService ? website!.outputs.resourceId : ''
           groupIds: ['sites']
         }
       }
