@@ -164,6 +164,14 @@ for bicep_file in "$platform_deploy_dir/main.bicep" "$platform_deploy_dir/main-b
     fi
 done
 
+# Ensure the source BYO template references the deploy version of base infra when committed
+contoso_byo_source="$platform_infra_dir/main-byo-vnet.bicep"
+if [ -f "$contoso_byo_source" ]; then
+    sed -i.bak "s|'../../../bicep/infra/main.bicep'|'../../../bicep/deploy/main.bicep'|g" "$contoso_byo_source"
+    rm -f "${contoso_byo_source}.bak"
+    print_gray "Normalized baseInfra module path in infra/main-byo-vnet.bicep"
+fi
+
 # Update common/types.bicep to use correct relative path
 if [ -f "$platform_deploy_dir/common/types.bicep" ]; then
     sed -i.bak "s|'../../../../bicep/infra/common/types.bicep'|'../../../bicep/infra/common/types.bicep'|g" "$platform_deploy_dir/common/types.bicep"
