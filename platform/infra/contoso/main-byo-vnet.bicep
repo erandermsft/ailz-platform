@@ -135,6 +135,9 @@ module subnetprovisioning 'vnet-prerequisites.bicep' = {
 // IMPORTANT: VNet and all subnets must already exist (deploy vnet-prerequisites.bicep first)
 //'../../../bicep/deploy/main.bicep'
 //'../../../bicep/infra/main.bicep' 
+
+var peSubnetId = '${existingVNetResourceId}/subnets/pe-subnet'
+
 module baseInfra '../../../bicep/deploy/main.bicep' = {
   name: 'ailz-base-infrastructure'
   params: {
@@ -205,7 +208,7 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       publicNetworkAccess: 'Disabled'
       privateEndpoints: [
         {
-          subnetResourceId: subnetprovisioning.outputs.peNsgResourceId
+          subnetResourceId: peSubnetId
           privateDnsZoneGroup: {
             privateDnsZoneGroupConfigs: [
               {
@@ -223,7 +226,7 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       publicNetworkAccess: 'Disabled'
       privateEndpoints: [
         {
-          subnetResourceId: subnetprovisioning.outputs.peNsgResourceId
+          subnetResourceId: peSubnetId
           privateDnsZoneGroup: {
             privateDnsZoneGroupConfigs: [
               {
@@ -239,7 +242,7 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       publicNetworkAccess: 'Disabled'
       privateEndpoints: [
         {
-          subnetResourceId: subnetprovisioning.outputs.peNsgResourceId
+          subnetResourceId: peSubnetId
           privateDnsZoneGroup: {
             privateDnsZoneGroupConfigs: [
               {
@@ -273,7 +276,7 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
           replicaCount: 1
           privateEndpoints: [
             {
-              subnetResourceId: subnetprovisioning.outputs.peNsgResourceId
+              subnetResourceId: peSubnetId
               privateDnsZoneGroup: {
                 privateDnsZoneGroupConfigs: [
                   {
@@ -332,28 +335,28 @@ module sqlServer 'br/public:avm/res/sql/server:0.9.0' = if (deploySql) {
 }
 
 // SQL Private Endpoint
-// module sqlPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.0' = if (deploySql) {
-//   name: 'pe-sql-${baseName}'
-//   params: {
-//     name: 'pe-sql-${baseName}'
-//     location: location
-//     // Use AILZ private endpoint subnet (created by baseInfra with default subnets)
-//     subnetResourceId: '${baseInfra.outputs.virtualNetworkResourceId}/subnets/pe-subnet'
+module sqlPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.0' = if (deploySql) {
+  name: 'pe-sql-${baseName}'
+  params: {
+    name: 'pe-sql-${baseName}'
+    location: location
+    // Use AILZ private endpoint subnet (created by baseInfra with default subnets)
+    subnetResourceId: '${baseInfra.outputs.virtualNetworkResourceId}/subnets/pe-subnet'
 
-//     privateLinkServiceConnections: [
-//       {
-//         name: 'sql-connection'
-//         properties: {
-//           privateLinkServiceId: sqlServer.outputs.resourceId
-//           groupIds: ['sqlServer']
-//         }
-//       }
-//     ]
+    privateLinkServiceConnections: [
+      {
+        name: 'sql-connection'
+        properties: {
+          privateLinkServiceId: sqlServer.outputs.resourceId
+          groupIds: ['sqlServer']
+        }
+      }
+    ]
 
-//     // TODO: Integrate with AILZ-managed Private DNS Zone if available
-//     customNetworkInterfaceName: 'nic-pe-sql-${baseName}'
-//   }
-// }
+    // TODO: Integrate with AILZ-managed Private DNS Zone if available
+    customNetworkInterfaceName: 'nic-pe-sql-${baseName}'
+  }
+}
 
 // ===================================
 // CONTOSO RESOURCES - APP SERVICE
@@ -440,27 +443,27 @@ module website 'br/public:avm/res/web/site:0.19.4' = if (deployAppService) {
 }
 
 // App Service Private Endpoint (for inbound HTTPS traffic)
-// module appServicePrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.0' = if (deployAppService) {
-//   name: 'pe-app-${baseName}'
-//   params: {
-//     name: 'pe-app-${baseName}'
-//     location: location
-//     subnetResourceId: '${baseInfra.outputs.virtualNetworkResourceId}/subnets/pe-subnet'
+module appServicePrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.0' = if (deployAppService) {
+  name: 'pe-app-${baseName}'
+  params: {
+    name: 'pe-app-${baseName}'
+    location: location
+    subnetResourceId: '${baseInfra.outputs.virtualNetworkResourceId}/subnets/pe-subnet'
 
-//     privateLinkServiceConnections: [
-//       {
-//         name: 'appservice-connection'
-//         properties: {
-//           privateLinkServiceId: deployAppService ? website.outputs.resourceId : ''
-//           groupIds: ['sites']
-//         }
-//       }
-//     ]
+    privateLinkServiceConnections: [
+      {
+        name: 'appservice-connection'
+        properties: {
+          privateLinkServiceId: deployAppService ? website.outputs.resourceId : ''
+          groupIds: ['sites']
+        }
+      }
+    ]
 
-//     // TODO: Integrate with AILZ-managed Private DNS Zone if available
-//     customNetworkInterfaceName: 'nic-pe-app-${baseName}'
-//   }
-// }
+    // TODO: Integrate with AILZ-managed Private DNS Zone if available
+    customNetworkInterfaceName: 'nic-pe-app-${baseName}'
+  }
+}
 
 // ===================================
 // OUTPUTS
