@@ -736,7 +736,7 @@ param vNetDefinition vNetDefinitionType?
 param existingVNetSubnetsDefinition existingVNetSubnetsDefinitionType?
 
 var varDeployVnet = deployToggles.virtualNetwork && empty(resourceIds.?virtualNetworkResourceId)
-var varDeploySubnetsToExistingVnet = existingVNetSubnetsDefinition != null
+var varDeploySubnetsToExistingVnet = false
 
 // Parse existing VNet Resource ID for cross-subscription/resource group support
 var varExistingVNetIdSegments = varDeploySubnetsToExistingVnet
