@@ -26,15 +26,60 @@ var dnsZoneNames = {
 }
 
 var dnsZoneResourceIds = {
-  acr: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.acr)
-  aiServices: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.aiServices)
-  appConfig: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.appConfig)
-  openai: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.openai)
-  cognitiveservices: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.cognitiveservices)
-  blob: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.blob)
-  keyVault: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.keyVault)
-  search: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.search)
-  cosmos: resourceId(dnsZoneSubscriptionId, dnsZoneResourceGroupName, 'Microsoft.Network/privateDnsZones', dnsZoneNames.cosmos)
+  acr: resourceId(
+    dnsZoneSubscriptionId,
+    dnsZoneResourceGroupName,
+    'Microsoft.Network/privateDnsZones',
+    dnsZoneNames.acr
+  )
+  aiServices: resourceId(
+    dnsZoneSubscriptionId,
+    dnsZoneResourceGroupName,
+    'Microsoft.Network/privateDnsZones',
+    dnsZoneNames.aiServices
+  )
+  appConfig: resourceId(
+    dnsZoneSubscriptionId,
+    dnsZoneResourceGroupName,
+    'Microsoft.Network/privateDnsZones',
+    dnsZoneNames.appConfig
+  )
+  openai: resourceId(
+    dnsZoneSubscriptionId,
+    dnsZoneResourceGroupName,
+    'Microsoft.Network/privateDnsZones',
+    dnsZoneNames.openai
+  )
+  cognitiveservices: resourceId(
+    dnsZoneSubscriptionId,
+    dnsZoneResourceGroupName,
+    'Microsoft.Network/privateDnsZones',
+    dnsZoneNames.cognitiveservices
+  )
+  blob: resourceId(
+    dnsZoneSubscriptionId,
+    dnsZoneResourceGroupName,
+    'Microsoft.Network/privateDnsZones',
+    dnsZoneNames.blob
+  )
+  keyVault: resourceId(
+    dnsZoneSubscriptionId,
+    dnsZoneResourceGroupName,
+    'Microsoft.Network/privateDnsZones',
+    dnsZoneNames.keyVault
+  )
+  search: resourceId(
+    dnsZoneSubscriptionId,
+    dnsZoneResourceGroupName,
+    'Microsoft.Network/privateDnsZones',
+    dnsZoneNames.search
+  )
+  cosmos: resourceId(
+    dnsZoneSubscriptionId,
+    dnsZoneResourceGroupName,
+    'Microsoft.Network/privateDnsZones',
+    dnsZoneNames.cosmos
+  )
 }
 
 @description('Optional. Location')
@@ -90,7 +135,7 @@ module subnetprovisioning 'vnet-prerequisites.bicep' = {
 // IMPORTANT: VNet and all subnets must already exist (deploy vnet-prerequisites.bicep first)
 //'../../../bicep/deploy/main.bicep'
 //'../../../bicep/infra/main.bicep' 
-module baseInfra '../../../bicep/deploy/main.bicep' = {
+module baseInfra '../../../bicep/infra/main.bicep' = {
   name: 'ailz-base-infrastructure'
   params: {
     flagPlatformLandingZone: true
@@ -124,11 +169,9 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       storageAccount: true
       wafPolicy: false
     }
-    resourceIds:  {
+    resourceIds: {
       virtualNetworkResourceId: existingVNetResourceId
       peNsgResourceId: subnetprovisioning.outputs.peNsgResourceId
-
-
     }
     location: location
     existingVNetSubnetsDefinition: {
@@ -153,25 +196,49 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       blobZoneId: dnsZoneResourceIds.blob
       keyVaultZoneId: dnsZoneResourceIds.keyVault
       searchZoneId: dnsZoneResourceIds.search
-    
+
       createNetworkLinks: false
     }
     appConfigurationDefinition: {
       name: 'appcfg-${baseName}'
       disableLocalAuth: true
       publicNetworkAccess: 'Disabled'
+      privateEndpoints: [
+        {
+          subnetResourceId: subnetprovisioning.outputs.peNsgResourceId
+          privateDnsZoneGroup: {
+            privateDnsZoneGroupConfigs: [
+              {
+                privateDnsZoneResourceId: dnsZoneResourceIds.appConfig
+              }
+            ]
+          }
+        }
+      ]
     }
     keyVaultDefinition: {
       name: 'kv-${baseName}'
       publicNetworkAccess: 'Disabled'
+      privateEndpoints: [
+        {
+          subnetResourceId: subnetprovisioning.outputs.peNsgResourceId
+          privateDnsZoneGroup: {
+            privateDnsZoneGroupConfigs: [
+              {
+                privateDnsZoneResourceId: dnsZoneResourceIds.keyVault
+              }
+            ]
+          }
+        }
+      ]
     }
     aiFoundryDefinition: {
       aiFoundryConfiguration: {
         disableLocalAuth: true
-        networking:{
+        networking: {
           aiServicesPrivateDnsZoneResourceId: dnsZoneResourceIds.aiServices
           cognitiveServicesPrivateDnsZoneResourceId: dnsZoneResourceIds.cognitiveservices
-          openAiPrivateDnsZoneResourceId:dnsZoneResourceIds.openai
+          openAiPrivateDnsZoneResourceId: dnsZoneResourceIds.openai
         }
       }
     }
@@ -186,6 +253,18 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
           }
           publicNetworkAccess: 'Disabled'
           replicaCount: 1
+          privateEndpoints: [
+            {
+              subnetResourceId: subnetprovisioning.outputs.peNsgResourceId
+              privateDnsZoneGroup: {
+                privateDnsZoneGroupConfigs: [
+                  {
+                    privateDnsZoneResourceId: dnsZoneResourceIds.search
+                  }
+                ]
+              }
+            }
+          ]
         }
       : {}
 
