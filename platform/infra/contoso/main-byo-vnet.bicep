@@ -2,8 +2,6 @@ import { contosoDeployTogglesType, resourceIdType } from 'common/types.bicep'
 
 // param deployToggles baseDeployToggles
 param contosoToggles contosoDeployTogglesType
-param resourceIds resourceIdType
-
 var deployAppService = contosoToggles.?appService ?? false
 var deploySql = contosoToggles.?azureSql ?? false
 var deployJumpBox = contosoToggles.?jumpBox ?? false
@@ -126,9 +124,12 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       storageAccount: true
       wafPolicy: false
     }
-    resourceIds: union(resourceIds, {
+    resourceIds:  {
       virtualNetworkResourceId: existingVNetResourceId
-    })
+      peNsgResourceId: subnetprovisioning.outputs.peNsgResourceId
+
+
+    }
     location: location
     existingVNetSubnetsDefinition: {
       existingVNetName: existingVNetNameForSubnets

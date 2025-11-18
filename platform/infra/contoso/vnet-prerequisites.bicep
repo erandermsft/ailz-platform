@@ -125,7 +125,7 @@ resource appServiceNsg 'Microsoft.Network/networkSecurityGroups@2023-11-01' = if
 module peNsg 'br/public:avm/res/network/network-security-group:0.5.1' = {
   name: 'nsg-${uniqueString('pensg')}'
   params: {
-    name: 'pensg'
+    name: 'nsg-pe-${baseName}'
     location: location
     enableTelemetry: false
   }
@@ -332,3 +332,4 @@ module byoSubnets '../../../bicep/infra/helpers/deploy-subnets-to-vnet/main.bice
 
 output vnetResourceId string = vnet.id
 output vnetName string = vnet.name
+output peNsgResourceId string = peNsg.outputs.resourceId
