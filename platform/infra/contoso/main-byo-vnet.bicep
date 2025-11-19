@@ -137,7 +137,7 @@ module subnetprovisioning 'vnet-prerequisites.bicep' = {
 //'../../../bicep/infra/main.bicep' 
 
 var peSubnetId = '${existingVNetResourceId}/subnets/pe-subnet'
-module baseInfra '../../../bicep/deploy/main.bicep' = {
+module baseInfra '../../../bicep/infra/main.bicep' = {
   name: 'ailz-base-infrastructure'
   params: {
     flagPlatformLandingZone: true
@@ -272,12 +272,11 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
 
       aiFoundryConfiguration: {
         disableLocalAuth: true
-
-        // networking: {
-        //   aiServicesPrivateDnsZoneResourceId: dnsZoneResourceIds.aiServices
-        //   cognitiveServicesPrivateDnsZoneResourceId: dnsZoneResourceIds.cognitiveservices
-        //   openAiPrivateDnsZoneResourceId: dnsZoneResourceIds.openai
-        // }
+        networking: {
+          aiServicesPrivateDnsZoneResourceId: dnsZoneResourceIds.aiServices
+          cognitiveServicesPrivateDnsZoneResourceId: dnsZoneResourceIds.cognitiveservices
+          openAiPrivateDnsZoneResourceId: dnsZoneResourceIds.openai
+        }
       }
     }
     aiSearchDefinition: deploySearch
