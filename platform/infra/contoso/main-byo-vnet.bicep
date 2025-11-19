@@ -137,7 +137,7 @@ module subnetprovisioning 'vnet-prerequisites.bicep' = {
 //'../../../bicep/infra/main.bicep' 
 
 var peSubnetId = '${existingVNetResourceId}/subnets/pe-subnet'
-module baseInfra '../../../bicep/deploy/main.bicep' = {
+module baseInfra '../../../bicep/infra/main.bicep' = {
   name: 'ailz-base-infrastructure'
   params: {
     flagPlatformLandingZone: true
@@ -186,14 +186,14 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       defaultToOAuthAuthentication: true
       isLocalUserEnabled: false
       publicNetworkAccess: 'Disabled'
+      allowSharedKeyAccess: false
+
       privateEndpoints: [
         {
           subnetResourceId: peSubnetId
           service: 'blob'
           privateDnsZoneGroup: {
-
             privateDnsZoneGroupConfigs: [
-              
               {
                 privateDnsZoneResourceId: dnsZoneResourceIds.blob
               }
@@ -220,6 +220,7 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
     containerRegistryDefinition: {
       name: 'cr${baseName}'
       publicNetworkAccess: 'Disabled'
+
       privateEndpoints: [
         {
           subnetResourceId: peSubnetId
@@ -268,8 +269,32 @@ module baseInfra '../../../bicep/deploy/main.bicep' = {
       ]
     }
     aiFoundryDefinition: {
-      // privateEndpointSubnetResourceId: peSubnetId
-
+      aiModelDeployments: [
+        {
+          model: {
+            format: 'OpenAI'
+            name: 'gpt-4o'
+            version: '2024-11-20'
+          }
+          name: 'gpt-4o'
+          sku: {
+            name: 'Standard'
+            capacity: 1
+          }
+        }
+        {
+          model: {
+            format: 'OpenAI'
+            name: 'text-embedding-3-large'
+            version: '1'
+          }
+          name: 'text-embedding-3-large'
+          sku: {
+            name: 'Standard'
+            capacity: 1
+          }
+        }
+      ]
       aiFoundryConfiguration: {
         disableLocalAuth: true
         networking: {
