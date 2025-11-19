@@ -103,7 +103,7 @@ export AZURE_LOCATION="$LOCATION"
 export AZURE_RESOURCE_GROUP="$RESOURCE_GROUP"
 export AZURE_SUBSCRIPTION_ID="$SUBSCRIPTION_ID"
 [ -n "$TEMPLATE_SPEC_RG" ] && export AZURE_TS_RG="$TEMPLATE_SPEC_RG"
-chmod +x /scripts/preprovision.sh
+chmod +x ./scripts/preprovision.sh
 if ./scripts/preprovision.sh; then
     print_success "Upstream preprovision complete"
 else
