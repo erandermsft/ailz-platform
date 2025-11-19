@@ -187,7 +187,6 @@ module baseInfra '../../../bicep/infra/main.bicep' = {
       isLocalUserEnabled: false
       publicNetworkAccess: 'Disabled'
       allowSharedKeyAccess: false
-
       privateEndpoints: [
         {
           subnetResourceId: peSubnetId
