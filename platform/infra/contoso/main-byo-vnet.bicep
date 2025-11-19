@@ -184,6 +184,8 @@ module baseInfra '../../../bicep/infra/main.bicep' = {
       name: 'st${baseName}'
       allowBlobPublicAccess: false
       defaultToOAuthAuthentication: true
+      customDomainName: null
+      customDomainUseSubDomainName: null
       isLocalUserEnabled: false
       publicNetworkAccess: 'Disabled'
       allowSharedKeyAccess: false
@@ -219,6 +221,7 @@ module baseInfra '../../../bicep/infra/main.bicep' = {
     containerRegistryDefinition: {
       name: 'cr${baseName}'
       publicNetworkAccess: 'Disabled'
+      azureADAuthenticationAsArmPolicyStatus:'disabled'
 
       privateEndpoints: [
         {
